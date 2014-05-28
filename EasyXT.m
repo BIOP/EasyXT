@@ -7,8 +7,10 @@ classdef EasyXT
     %   It is of course a work in progress and will greatly benefit from
     %   any feedback from the community of users.
     %   
-    % Olivier Burri EPFL BioImaging And Optics Platform, March 2014
+    % Olivier Burri & Romain Guiet, EPFL BioImaging & Optics Platform
+    % March 2014
     % olivier dot burri at epfl.ch
+    % romain dot guiet at epfl.ch
     % The necessary disclaimer:
     % We abide by the GNU General Public License (GPL) version 3:
     %     This program is free software: you can redistribute it and/or modify
