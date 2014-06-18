@@ -229,6 +229,8 @@ classdef EasyXT
         end
         
         function number = GetNumberOf(eXT, type, varargin)
+            %% GETNUMBEROF recovers the number of objects with a certain name or type
+            % Imarisobject = GETNUMBEROF('Name', name, ...
             parent = eXT.ImarisApp.GetSurpassScene;
             name = [];
             for i=1:2:length(varargin)
