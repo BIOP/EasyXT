@@ -1032,6 +1032,8 @@ classdef EasyXT
                         regionThr= varargin{i+1};
                         if ~strcmp(regionThr, 'Auto')
                             isRegAutoThr = false;
+                        else
+                            regionThr =0;
                         end
                         isRegionGrow = true;
                     case 'Diameter From Volume'
@@ -1062,6 +1064,7 @@ classdef EasyXT
             % Finally detect the spots...
             if(isRegionGrow)
                 if(useEllipse)
+                    celldisp({ channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false});
                     spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 else
                     spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, dxy, isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
