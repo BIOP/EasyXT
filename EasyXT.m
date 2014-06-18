@@ -52,7 +52,7 @@ classdef EasyXT
             
             lib = getSavedImarisLib();
             if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
-                 [FileName,PathName,FilterIndex] = uigetfile('.jar','Location of ImarisLib.jar');
+                 [FileName,PathName] = uigetfile('.jar','Location of ImarisLib.jar');
                  eXT.imarisLibPath = [PathName, FileName];
                  setSavedImarisLib(eXT.imarisLibPath);
             end
