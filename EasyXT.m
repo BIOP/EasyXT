@@ -176,7 +176,7 @@ classdef EasyXT
             
             object = [];
             
-            if nargin==0
+            if nargin==1
                 % Return the active selection
                 ImarisObject = GetImarisObject(eXT, eXT.ImarisApp.GetSurpassSelection, cast);
             else
@@ -1368,50 +1368,54 @@ classdef EasyXT
             % here you can't use vSpots, you have to use vObject!!!
             allStats = GetAllStatistics(eXT, object);
             stats = allStats;
-            indexes = find(strcmp(allStats.names, selectedStatistic));
             
-            % GetSelectedStatistics returns a structure with the stats requested
-            if ~isempty(channel) && ~isempty(time)
-                %Check if the statistic of interest has channels
-                fIndexC = find(strcmp(allStats.factorNames, 'Channel'));
-                if ~any(strcmp(allStatistics.factors(fIndexC, indexes), ''))
-                    % Keep going, check times
-                    fIndexT = find(strcmp(allStats.factorNames, 'Time'));
-                    if ~any(strcmp(allStats.factors(fIndexT, indexes), ''))
-                        % Do it
-                        selectedIdx = indexes(find(indexes == fIndexC && indexes == fIndexT && fIndexC == fIndexT));
-                        stats.time      =   cellfun(@str2num, allStatistics.factors(fIndexT, selectedIdx))';
-                        stats.channel = cellfun(@str2num, allStatistics.factors(fIndexC, selectedIdx))';
-                    end
-                    
-                end
+            
+            
+            expr = 'find(strcmp(allStats.names, selectedStatistic)';
+
+            % Get info on the channel
+            if ~isempty(channel) 
+                chInd = find(strcmpi('Channel', allStats.factorNames));
                 
+                % Make channel list
+                channelsCell = cellfun(@str2num, allStats.factors(:,chInd),  'UniformOutput', false);
+                emptyIndexes = cellfun(@isempty,channelsCell); 
+                channelsCell(emptyIndexes) = {-1}; % Make empty channels -1, so as to keep them.
+                channelList = cell2mat(channelsCell);
                 
-            elseif ~isempty(channel)
-                fIndexC = find(strcmp(allStats.factorNames, 'Channel'));
-                selectedIdx = indexes(find(indexes == fIndexC));
-                if ~any(strcmp(allStats.factors(fIndexC, indexes(selectedIdx)), ''))
-                    stats.channel = cellfun(@str2num, allStatistics.factors(fIndexC, indexes(selectedIdx)))';
-                end
-                
-            elseif ~isempty(time)
-                fIndexT = find(strcmp(allStats.factorNames, 'Time'));
-                selectedIdx = indexes(find(indexes == fIndexT));
-                if ~any(strcmp(allStatistics.factors(fIndexT, indexes(selectedIdx)), ''))
-                    stats.time = cellfun(@str2num, allStatistics.factors(selectedIdx, indexes(selectedIdx)))';
-                end
-            else
-                selectedIdx = indexes;
+                expr = [expr ' & (channelList == channel)'];                
             end
             
-            stats.names         =   allStats.names(selectedIdx);
-            stats.ids           =   allStats.ids(selectedIdx);
-            stats.units         =   allStats.units(selectedIdx);
-            stats.values        =   allStats.values(selectedIdx);
-            stats.factors       =   allStats.factors(selectedIdx,:);
-            stats.factorNames   =   allStats.factorNames;
+            if ~isempty(time)
+                tInd = find(strcmpi('Time', allStats.factorNames));
+                % Make time list
+                timesCell = cellfun(@str2num, allStats.factors(:,tInd),  'UniformOutput', false);
+                emptyIndexes = cellfun(@isempty,timesCell); 
+                timesCell(emptyIndexes) = {-1}; % Make empty times -1, so as to keep them.
+                timeList = cell2mat(timesCell);
+                
+                expr = [expr ' & (timeList == time)'];          
+
+            end
             
-            stats.indexes   =   selectedIdx;
+            size(channelList)
+            
+            % Return results
+            expr = [expr ');']
+            
+            
+            
+            selectedStatIdx = eval(expr);
+
+            stats.names         =   allStats.names(selectedStatIdx);
+            stats.ids           =   allStats.ids(selectedStatIdx);
+            stats.units         =   allStats.units(selectedStatIdx);
+            stats.values        =   allStats.values(selectedStatIdx);
+            stats.factors       =   allStats.factors(selectedStatIdx,:);
+            stats.factorNames   =   allStats.factorNames;
+            stats.indexes       =   selectedStatIdx;
+            
+            
             
         end
         
@@ -1447,9 +1451,9 @@ classdef EasyXT
                     allStatistics.posXYZ = object.GetPositionsXYZ;
                     allStatistics.radii = object.GetRadiiXYZ;
                 case 'Surfaces'
-                    allStatistics.nSurf =  object.GetNumberOfSurfaces;
-                    for i=0:(allStatistics.nSurf-1)
+                    for i=0:(object.GetNumberOfSurfaces-1)
                         allStatistics.posXYZ(i+1,:)  = object.GetCenterOfMass(i);
+                        allStatistics.tIndices(i+1) = object.GetTimeIndex(i);
                     end
                     
                 case 'Points'
