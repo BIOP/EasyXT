@@ -17,7 +17,7 @@ newSpots = XT.DetectSpots(channel, 'Name', 'My Spots', ...
                                   'Spots Filter', '"Quality" above 10.0' ...
                          );
 % Changing the color
-XT.SetColor(newSpots, [200 200 0]);
+XT.SetColor(newSpots, [200 255 0]);
     
 % Adding them to a new folder
 folder = XT.CreateGroup('My Group');
