@@ -1107,7 +1107,7 @@ classdef EasyXT
             % parameter value is set to false, then it will overwrite the
             % existing channel
             
-            duplicate = 'Yes';
+            duplicate = true;
             for i=1:2:length(varargin)
                 switch varargin{i}
                     case 'Duplicate'
@@ -1116,8 +1116,12 @@ classdef EasyXT
                         error(['Unrecognized Command:' varargin{i}]);
                 end
             end
+            
+            vData = eXT.ImarisApp.GetDataSet;
             %Duplicate the channel
-            if (strcmp(duplicate, 'Yes'))
+            channelName = char(vData.GetChannelName(channel-1));
+            color= vData.GetChannelColorRGBA(channel-1);
+            if (duplicate)
                 chString = strcat('ch', num2str(channel));
                 exp = {chString};
                 c = GetSize(eXT, 'C');
@@ -1126,9 +1130,10 @@ classdef EasyXT
             % Now smooth it.
             c = GetSize(eXT, 'C')-1;
             
-            vData = eXT.ImarisApp.GetDataSet;
             eXT.ImarisApp.GetImageProcessing.GaussFilterChannel(vData,c,sigma);
-            vData.SetChannelName(c, ['Ch' num2str(channel)-1 ' Gaussian Sigma ' num2str(sigma)]);
+            vData.SetChannelName(c, [channelName ' Gaussian Sigma ' num2str(sigma)]);
+            vData.SetChannelColorRGBA(c, color);
+            
         end
     end
     %% Helper and Type converting functions
