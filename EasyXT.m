@@ -303,7 +303,7 @@ classdef EasyXT
                 colors(4) = 0;              % means no transparecncy setted, so color(4) = 0
             end
             
-            if length(colors) == 1          % if only 1 value
+            if length(colors) == 1  && colors < 255        % if only 1 value
                 colors(1:3) = colors(1);    % set it for each column
             end
             
@@ -311,10 +311,16 @@ classdef EasyXT
                 disp('That is not a color, dear... I need a matrix with 1, 3 or 4 elements. Did you forget your medication?');
                 colors = [128, 128, 128, 0]; % set it to grey
             end
-            col = colors(1) + colors(2)*256 + colors(3)*256^2 + colors(4)*256^3;
-            % Note that the A value (Transparency, or color(4))can only go to 128, this is a bug in
-            % Imaris...
-            object.SetColorRGBA(double(col));
+            
+            if length(colors) == 1  && colors > 255
+                object.SetColorRGBA(double(colors));
+            else
+                col = colors(1) + colors(2)*256 + colors(3)*256^2 + colors(4)*256^3;
+                % Note that the A value (Transparency, or color(4))can only go to 128, this is a bug in
+                % Imaris...
+                object.SetColorRGBA(double(col));
+            end
+            
         end
         
         function spots = CreateSpots(eXT, PosXYZ, spotSizes, varargin)
@@ -365,13 +371,20 @@ classdef EasyXT
                 end
             end
             
-            if ~(size(spotSizes,2) == 3 || size(spotSizes,2) == 1)
+             if (all(size(spotSizes) == [1 1]))
+                    spotSizes = repmat(spotSizes, size(PosXYZ,1),1);
+             end
+            
+            if ~( size(spotSizes,2) == 3 || size(spotSizes,2) == 1 )&& ( size(spotSizes,1) == size(PosXYZ,1) )
                 error('Radii must be either an nx1 array or an nx3 array');
             end
             if size(PosXYZ,2) ~= 3
                 error('XYZ must be nx3 in size...');
             end
+            fprintf('Number of coordinates: %d',size(PosXYZ,2));
+            fprintf('Number of coordinates: %d',size(spotSizes,2));
             
+
             % Create the spots
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
             
@@ -1084,9 +1097,10 @@ classdef EasyXT
                 spots.SetName(name);
             end
             
-            if ~isempty(color)
-                SetColor(spots, color);
-            end
+            if isempty(color)
+                color = double(eXT.ImarisApp.GetDataSet.GetChannelColorRGBA(channel-1));
+           end     
+                SetColor(eXT,spots, color);
         end
         
         function folderRef = CreateGroup(eXT, name)
@@ -1133,6 +1147,93 @@ classdef EasyXT
             eXT.ImarisApp.GetImageProcessing.GaussFilterChannel(vData,c,sigma);
             vData.SetChannelName(c, [channelName ' Gaussian Sigma ' num2str(sigma)]);
             vData.SetChannelColorRGBA(c, color);
+            
+        end
+        
+        function [pathstr,name,ext] = GetCurrentFileName(eXT) 
+            %% GetCurrentFileName returns the surrent file name path and extension
+            % [pathstr,name,ext] = GetCurrentFileName() has no arguments and returns the same variables
+            % as the fileparts function 
+            % see also FILEPARTS
+            fullPath = char(eXT.ImarisApp.GetCurrentFileName());
+            [pathstr,name,ext] = fileparts(fullPath);
+        end
+        
+        function newPoints = CreateMeasurementPoints(eXT, XYZ, varargin)
+            %% CREATEMEASUREMENTPOINTS Creates new Measurement Points with default parameters
+            % newPoints = CREATEMEASUREMENTPOINTS(XYZ, 'Name', name, ...
+            %                                    'Timepoints', times, ...
+            %                                    'Point Names', pointNames)
+            % Make a new Points Object and return it. If no optional
+            % parameters are set, then it creates the points at all
+            % timepoints and gives them names like "A", "B, .... "AA",
+            % "AB", ..
+            
+            duplicate = true;
+            name = [];
+            times = [];
+            pointNames = {};
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Name'
+                        name =  varargin{i+1};
+                    case 'Timepoints'
+                        times =  varargin{i+1};
+                    case 'Point Names'
+                        pointNames =  varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            % Declare new Points
+            newPoints = eXT.ImarisApp.GetFactory.CreateMeasurementPoints();
+                       
+            if size(times,2) ~= size(XYZ,1)
+                if isempty(times) 
+                    % Get number of timepoints
+                    nT = GetSize(eXT, 'T');
+                    times = (1:nT) - 1;
+                    %Duplicate the points at each timepoint and the times array
+                    %as well
+                else
+                    
+                    nT = size(times,2);
+                   
+
+                end
+                
+                 %For each measurement point, duplicate it for all timepoints
+                 % We will put the points at the given timepoints
+                 
+                 XYZ = repmat(XYZ, nT,1); 
+                 times = repmat(times, size(XYZ,1),1);
+                 times = reshape(times, size(XYZ,1)*nT,1);
+                 
+                
+            end
+            
+            if size(pointNames,1) ~= size(XYZ,1)
+                % Make sure the pointNames make sense.
+                if isempty(pointNames)
+                    % Create from scratch
+                    
+                end
+                
+            end
+            
+            % Sizes should be the same
+            size(times,2)
+            size(XYZ,1)
+            size(pointNames,1)
+            
+            
+            if ~isempty(name)
+                newPoints.SetName(name);
+            end
+            
+            % Create the points
+            newPoints.Set(XYZ,times, pointNames);
             
         end
     end
@@ -1315,6 +1416,10 @@ classdef EasyXT
             end
         end
         
+        function color = GetChannelColor(eXT, number)
+            color = eXT.ImarisApp.GetDataSet.GetChannelColorRGBA(number-1);
+            
+        end
         function SetDataType(eXT, type)
             switch type
                 case '32-bit'
@@ -1335,7 +1440,11 @@ classdef EasyXT
             % eXT.ImarisApp.GetDataSet.SetType(aType);
         end
         
+
+    
     end
+    
+
     
     %% Methods in need of comments
     methods
@@ -1466,147 +1575,8 @@ classdef EasyXT
             end
             
         end
-        
-        
-        
-        
-        
-        
-        % Normally we don't need this one anymore.
-        function [nSpotsBySurface] = FindSpotsInsideSurface(eXT, spot, surface, varargin)
-            create = 0;
-            for i=1:2:length(varargin)
-                switch varargin{i}
-                    case 'Create'
-                        create =  isequal(varargin{i+1}, 'Yes');
-                    otherwise
-                        error(['Unrecognized Command:' varargin{i}]);
-                end
-            end
-            
-            
-            % get the spots coordinates
-            vSpotsXYZ = spot.GetPositionsXYZ;
-            vSpotsTime = spot.GetIndicesT;
-            vSpotsRadius = spot.GetRadiiXYZ;
-            vSpotsName = char(spot.GetName);
-            
-            spot.SetVisible(false);
-            vTimeInterval = min(vSpotsTime):max(vSpotsTime);
-            vIndicesSpotsTime = cell(numel(vTimeInterval), 1);
-            for vTime = vTimeInterval
-                vIndicesSpotsTime{vTime - vTimeInterval(1) + 1} = find(vSpotsTime == vTime);
-            end
-            
-            if(create)
-                % get the parent group
-                vParentGroup = spot.GetParent;
-                vNewGroup = eXT.ImarisApp.GetFactory.CreateDataContainer;
-                vNewGroup.SetName([vSpotsName, ' inside Surfaces']);
-                vParentGroup.AddChild(vNewGroup, -1);
-            end
-            
-            % mask volume
-            if size(vSpotsXYZ,1) == 1
-                vMin = vSpotsXYZ;
-                vMax  = vSpotsXYZ;
-            else
-                vMin = min(vSpotsXYZ);
-                vMax = max(vSpotsXYZ);
-            end
-            
-            % add 1% border to be sure to include all spots (avoid edge effects)
-            vDelta = vMax - vMin;
-            if ~any(vDelta > 0)
-                vDelta = [1, 1, 1];
-            end
-            vDelta(vDelta == 0) = mean(vDelta(vDelta > 0));
-            vMin = vMin - vDelta*0.005;
-            vMax = vMax + vDelta*0.005;
-            
-            vMaskSize = 350;
-            
-            vMaxMaskSize = vMaskSize / max(vMax-vMin);
-            
-            % spots coordinates on the mask
-            vSpotsOnMaskXYZ = zeros(size(vSpotsXYZ));
-            
-            for vDim = 1:3
-                vSpotsOnMaskXYZ(:, vDim) = ceil((vSpotsXYZ(:, vDim)-vMin(vDim))*vMaxMaskSize);
-            end
-            
-            % the zeros belongs to the first interval
-            vSpotsOnMaskXYZ = max(vSpotsOnMaskXYZ, 1);
-            
-            vMaskSize = ceil((vMax-vMin)*vMaxMaskSize);
-            
-            % Get the surface
-            vSurfaces = surface;
-            
-            % statFactorNames = cellstr(char(vAllStatistics.mFactorNames));
-            % statID = vAllStatistics.mIds;
-            % statFactors = vAllStatistics.mFactors;
-            
-            vNumberOfSurfaces = vSurfaces.GetNumberOfSurfaces;
-            for vSurfaceIndex = 0:vNumberOfSurfaces-1
-                vAllIndices = vSpotsTime;
-                vAllIndicesSize = 0;
-                
-                vMask = vSurfaces.GetSingleMask(vSurfaceIndex, ...
-                    vMin(1), vMin(2), vMin(3), vMax(1), vMax(2), vMax(3),...
-                    int32(vMaskSize(1)), int32(vMaskSize(2)), int32(vMaskSize(3)));
-                
-                for vTime = vTimeInterval
-                    vMaskImage = vMask.GetDataVolumeAs1DArrayBytes(0, vTime);
-                    vMaskImage = reshape(vMaskImage, vMaskSize);
-                    
-                    % search the element of the spot that lies inside the surface
-                    vIndexSpotsTime = vIndicesSpotsTime{vTime - vTimeInterval(1) + 1};
-                    vSpotsCoords = vSpotsOnMaskXYZ(vIndexSpotsTime, :);
-                    vIndexSpotsInside = vMaskImage(vSpotsCoords(:, 1) + ...
-                        (vSpotsCoords(:, 2)-1)*vMaskSize(1) + ...
-                        (vSpotsCoords(:, 3)-1)*vMaskSize(1)*vMaskSize(2)) == 1;
-                    vIndexSpotsInside = vIndexSpotsTime(vIndexSpotsInside);
-                    
-                    % copy to complete list
-                    vSize = numel(vIndexSpotsInside);
-                    vAllIndices(vAllIndicesSize + (1:vSize)) = vIndexSpotsInside;
-                    vAllIndicesSize = vAllIndicesSize + vSize;
-                end
-                vAllIndices = vAllIndices(1:vAllIndicesSize);
-                
-                if (create)
-                    vSpotsInside = eXT.ImarisApp.GetFactory.CreateSpots;
-                    vSpotsInside.Set(vSpotsXYZ(vAllIndices, :), vSpotsTime(vAllIndices), ...
-                        zeros(sum(vAllIndices~=0),1));
-                    vSpotsInside.SetRadiiXYZ(vSpotsRadius(vAllIndices,:));
-                    vSpotsInside.SetName(sprintf('%s inside %s [%i]', ...
-                        vSpotsName, char(vSurfaces.GetName), vSurfaceIndex + 1));
-                    vNumberOfSurfaces = max(vNumberOfSurfaces, 2);
-                    vRed = (1-vSurfaceIndex/(vNumberOfSurfaces-1)) * 255;
-                    vGreen = (1-vChildIndex/(vNumberOfChildren-1)) * 255;
-                    vBlue = (vSurfaceIndex/(vNumberOfSurfaces-1)) * 255;
-                    vSpotsInside.SetColorRGBA(vRed + vGreen*256 + vBlue*256*256);
-                    vNewGroup.AddChild(vSpotsInside, -1);
-                end
-                %Here add the statistic to the surface object
-                statName{vSurfaceIndex+1}      = ['Number of Spots'];
-                statValue(vSurfaceIndex+1)     = vAllIndicesSize;
-                statUnit{vSurfaceIndex+1}      = '';
-                statID(vSurfaceIndex+1)        = (vSurfaceIndex);
-                statFactors{vSurfaceIndex+1}   = '';
-                
-            end
-            statFactorNames{1} = 'Nothing';
-            vSurfaces.AddStatistics(statName, statValue, ...
-                statUnit, statFactors, statFactorNames, statID);
-            nSpotsBySurface = statValue;
-            
-        end
-        
-        
-        
     end
+
 end
 
 function aData = DrawSphere(aData, aPos, aRad, aMin, aMax, aType, aInterpolate)
