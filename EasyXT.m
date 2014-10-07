@@ -421,6 +421,24 @@ classdef EasyXT
             
         end
         
+        function RemoveFromScene(eXT, object, varargin)
+            %% REMOVEFROMSCENE removes the object from Imaris Scene
+            % Optional Parameter/Value pairs
+            %   o Parent - The parent object to remove this object from.
+            parent = eXT.ImarisApp.GetSurpassScene;
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Parent'
+                        parent = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            parent.RemoveChild(object);
+        end
+        
         function [newChannel, vDataSet] = MakeChannelFromSurfaces(eXT, surface, varargin)
             %% MAKECHANNELFROMSURFACES builds a new channel from a surface mask.
             % [newChannel vDataSet] = MAKECHANNELFROMSURFACES(surface, ...
