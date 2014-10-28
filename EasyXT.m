@@ -175,7 +175,7 @@ classdef EasyXT
             end
             
             object = [];
-            
+            ImarisObject = [];
             if nargin==1
                 % Return the active selection
                 ImarisObject = GetImarisObject(eXT, eXT.ImarisApp.GetSurpassSelection, cast);
