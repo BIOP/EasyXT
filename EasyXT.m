@@ -381,9 +381,7 @@ classdef EasyXT
             if size(PosXYZ,2) ~= 3
                 error('XYZ must be nx3 in size...');
             end
-            fprintf('Number of coordinates: %d',size(PosXYZ,2));
-            fprintf('Number of coordinates: %d',size(spotSizes,2));
-            
+          
 
             % Create the spots
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
@@ -1223,10 +1221,6 @@ classdef EasyXT
             end
             
             % Sizes should be the same
-            size(times,2)
-            size(XYZ,1)
-            size(pointNames,1)
-            
             
             if ~isempty(name)
                 newPoints.SetName(name);
