@@ -175,7 +175,7 @@ classdef EasyXT
             end
             
             object = [];
-            
+            ImarisObject = [];
             if nargin==1
                 % Return the active selection
                 ImarisObject = GetImarisObject(eXT, eXT.ImarisApp.GetSurpassSelection, cast);
@@ -381,7 +381,7 @@ classdef EasyXT
             if size(PosXYZ,2) ~= 3
                 error('XYZ must be nx3 in size...');
             end
-          
+                       
 
             % Create the spots
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
@@ -417,6 +417,24 @@ classdef EasyXT
             
             parent.AddChild(object, -1);
             
+        end
+        
+        function RemoveFromScene(eXT, object, varargin)
+            %% REMOVEFROMSCENE removes the object from Imaris Scene
+            % Optional Parameter/Value pairs
+            %   o Parent - The parent object to remove this object from.
+            parent = eXT.ImarisApp.GetSurpassScene;
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Parent'
+                        parent = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            parent.RemoveChild(object);
         end
         
         function [newChannel, vDataSet] = MakeChannelFromSurfaces(eXT, surface, varargin)
@@ -1218,10 +1236,7 @@ classdef EasyXT
                     
                 end
                 
-            end
-            
-            % Sizes should be the same
-            
+            end              
             if ~isempty(name)
                 newPoints.SetName(name);
             end
