@@ -1236,14 +1236,7 @@ classdef EasyXT
                     
                 end
                 
-            end
-            
-            % Sizes should be the same
-            size(times,2)
-            size(XYZ,1)
-            size(pointNames,1)
-            
-            
+            end              
             if ~isempty(name)
                 newPoints.SetName(name);
             end
