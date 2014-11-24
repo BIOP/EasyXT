@@ -398,6 +398,34 @@ classdef EasyXT
             end
         end
         
+        function CreateNewScene(eXT)
+    
+         %% Create the surpass scene
+         vSurpassScene = eXT.ImarisApp.GetFactory.CreateDataContainer;
+         vSurpassScene.SetName('Scene');
+         %% Add a light source
+         vLightSource = eXT.ImarisApp.GetFactory.CreateLightSource;
+         vLightSource.SetName('Light source');
+         %% Add a frame (otherwise no 3D rendering)
+         vFrame = eXT.ImarisApp.GetFactory.CreateFrame;
+         vFrame.SetName(strcat('Frame'));
+         %% Add a Volume (otherwise no 3D rendering)
+         vVolume = eXT.ImarisApp.GetFactory.CreateVolume;
+         vVolume.SetName(strcat('Volume'));
+         
+         %% Set up the surpass scene
+         eXT.ImarisApp.SetSurpassScene(vSurpassScene);
+         AddToScene(eXT, vLightSource);
+         AddToScene(eXT, vFrame);
+         AddToScene(eXT, vVolume);
+         
+%          eXT.ImarisApp.GetSurpassScene.AddChild(vLightSource, -1);
+%          vImarisApplication.GetSurpassScene.AddChild(vFrame, -1);
+%          vImarisApplication.GetSurpassScene.AddChild(vVolume, -1);   
+        end
+        
+        
+        
         function AddToScene(eXT, object, varargin)
             %% ADDTOSCENE adds the object to the Imaris Scene
             % ADDTOSCENE(object, 'Parent', parent) adds the object to the
@@ -1584,8 +1612,24 @@ classdef EasyXT
             end
             
         end
+        
+        function booleanIsImage = isImage(eXT, fileName)
+            %% isImage takes the fileName as argument and returns
+            %  1 if the file name ends with an authorized file format
+            %  from the list {'czi' 'tif' 'ids' 'lsm'}, or 0.
+            extFileImage = {'czi' 'tif' 'ics' 'lsm'};
+            
+            % create the Regex that check fileName
+            extExpression = strcat('\w*\.',extFileImage,'$');
+            
+            % check if the fileName ends with any of the listed files format
+            booleanIsImage = any(cell2mat(regexp(fileName,extExpression))) > 0 ;
+            if  booleanIsImage
+                disp(sprintf('%s is a file',fileName));
+            end
+        end
+        
     end
-
 end
 
 function aData = DrawSphere(aData, aPos, aRad, aMin, aMax, aType, aInterpolate)
