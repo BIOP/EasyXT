@@ -998,6 +998,47 @@ classdef EasyXT
             SetColor(eXT, surface, color);
         end
         
+        function channelNumber = CreateSurfaceIDChannel(eXT, surfaceObj)
+            
+            % Create a new channel and for each surface object create a
+            dataSet = eXT.ImarisApp.GetDataSet();
+            
+            dataSet.SetSizeC(dataSet.GetSizeC()+1);
+            
+            
+            nSurf = surfaceObj.GetNumberOfSurfaces();
+            
+            sX = dataSet.GetSizeX;
+            sY = dataSet.GetSizeY;
+            sZ = dataSet.GetSizeZ;
+            
+            sT= dataSet.GetSizeT;
+            sC= dataSet.GetSizeC;
+            
+            % Prepare a 1DByte with the last channel and all timepoints
+            for t=0:(sT-1)
+                volume(:,t+1) = int8(zeros(sX*sY*sZ,1));
+            end
+            
+            mX = dataSet.GetExtendMinX;
+            mY = dataSet.GetExtendMinY;
+            mZ = dataSet.GetExtendMinZ;
+            
+            MX = dataSet.GetExtendMaxX;
+            MY = dataSet.GetExtendMaxY;
+            MZ = dataSet.GetExtendMaxZ;
+            for i=0:(nSurf-1)
+                t = surfaceObj.GetTimeIndex(i);
+                surfaceMask = surfaceObj.GetSingleMask (i, mX, mY, mZ, MX, MY, MZ, sX, sY, sZ).GetDataVolumeAs1DArrayBytes (0, 0).*(i);
+                volume(:,t+1) = volume(:,t+1) + surfaceMask;
+                
+            end
+        
+            for t=0:(sT-1)
+               dataSet.SetDataVolumeAs1DArrayBytes ( volume(:,t+1), sC-1, t);
+            end
+        end
+        
         function spots = DetectSpots(eXT, channel, varargin)
             %%DETECTSPOTS Applies the Imaris Spots Detection Functions
             % spot = DETECTSPOTS(channel, 'Name', surfaceName, ...
