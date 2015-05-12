@@ -402,6 +402,34 @@ classdef EasyXT
             end
         end
         
+        function CreateNewScene(eXT)
+    
+         %% Create the surpass scene
+         vSurpassScene = eXT.ImarisApp.GetFactory.CreateDataContainer;
+         vSurpassScene.SetName('Scene');
+         %% Add a light source
+         vLightSource = eXT.ImarisApp.GetFactory.CreateLightSource;
+         vLightSource.SetName('Light source');
+         %% Add a frame (otherwise no 3D rendering)
+         vFrame = eXT.ImarisApp.GetFactory.CreateFrame;
+         vFrame.SetName(strcat('Frame'));
+         %% Add a Volume (otherwise no 3D rendering)
+         vVolume = eXT.ImarisApp.GetFactory.CreateVolume;
+         vVolume.SetName(strcat('Volume'));
+         
+         %% Set up the surpass scene
+         eXT.ImarisApp.SetSurpassScene(vSurpassScene);
+         AddToScene(eXT, vLightSource);
+         AddToScene(eXT, vFrame);
+         AddToScene(eXT, vVolume);
+         
+%          eXT.ImarisApp.GetSurpassScene.AddChild(vLightSource, -1);
+%          vImarisApplication.GetSurpassScene.AddChild(vFrame, -1);
+%          vImarisApplication.GetSurpassScene.AddChild(vVolume, -1);   
+        end
+        
+        
+        
         function AddToScene(eXT, object, varargin)
             %% ADDTOSCENE adds the object to the Imaris Scene
             % ADDTOSCENE(object, 'Parent', parent) adds the object to the
@@ -972,6 +1000,47 @@ classdef EasyXT
             end
             
             SetColor(eXT, surface, color);
+        end
+        
+        function channelNumber = CreateSurfaceIDChannel(eXT, surfaceObj)
+            
+            % Create a new channel and for each surface object create a
+            dataSet = eXT.ImarisApp.GetDataSet();
+            
+            dataSet.SetSizeC(dataSet.GetSizeC()+1);
+            
+            
+            nSurf = surfaceObj.GetNumberOfSurfaces();
+            
+            sX = dataSet.GetSizeX;
+            sY = dataSet.GetSizeY;
+            sZ = dataSet.GetSizeZ;
+            
+            sT= dataSet.GetSizeT;
+            sC= dataSet.GetSizeC;
+            
+            % Prepare a 1DByte with the last channel and all timepoints
+            for t=0:(sT-1)
+                volume(:,t+1) = int8(zeros(sX*sY*sZ,1));
+            end
+            
+            mX = dataSet.GetExtendMinX;
+            mY = dataSet.GetExtendMinY;
+            mZ = dataSet.GetExtendMinZ;
+            
+            MX = dataSet.GetExtendMaxX;
+            MY = dataSet.GetExtendMaxY;
+            MZ = dataSet.GetExtendMaxZ;
+            for i=0:(nSurf-1)
+                t = surfaceObj.GetTimeIndex(i);
+                surfaceMask = surfaceObj.GetSingleMask (i, mX, mY, mZ, MX, MY, MZ, sX, sY, sZ).GetDataVolumeAs1DArrayBytes (0, 0).*(i);
+                volume(:,t+1) = volume(:,t+1) + surfaceMask;
+                
+            end
+        
+            for t=0:(sT-1)
+               dataSet.SetDataVolumeAs1DArrayBytes ( volume(:,t+1), sC-1, t);
+            end
         end
         
         function spots = DetectSpots(eXT, channel, varargin)
@@ -1604,8 +1673,24 @@ classdef EasyXT
             end
             
         end
+        
+        function booleanIsImage = isImage(eXT, fileName)
+            %% isImage takes the fileName as argument and returns
+            %  1 if the file name ends with an authorized file format
+            %  from the list {'czi' 'tif' 'ids' 'lsm'}, or 0.
+            extFileImage = {'czi' 'tif' 'ics' 'lsm'};
+            
+            % create the Regex that check fileName
+            extExpression = strcat('\w*\.',extFileImage,'$');
+            
+            % check if the fileName ends with any of the listed files format
+            booleanIsImage = any(cell2mat(regexp(fileName,extExpression))) > 0 ;
+            if  booleanIsImage
+                disp(sprintf('%s is a file',fileName));
+            end
+        end
+        
     end
-
 end
 
 function aData = DrawSphere(aData, aPos, aRad, aMin, aMax, aType, aInterpolate)
