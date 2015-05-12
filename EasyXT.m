@@ -31,8 +31,12 @@ classdef EasyXT
         % so it can be accessed by all functions.
         ImarisApp;
         
+        % Path To Imaris
+        imarisPath = 'C:\Program Files\Bitplane\Imaris x64 7.6.5\';
+        
         % We can define here the path where ImarisLib.jar is
-        imarisLibPath = 'C:\Program Files\Bitplane\Imaris x64 7.6.5\XT\matlab\ImarisLib.jar';
+        imarisLibPath = ['C:\Program Files\Bitplane\Imaris x64 7.6.5\' 'XT\matlab\ImarisLib.jar'];
+        
         
     end
     
@@ -50,11 +54,11 @@ classdef EasyXT
             % Supress Java Duplicate Class warnings
             warning('off','MATLAB:Java:DuplicateClass');
             
-            lib = getSavedImarisLib();
+            lib = getSavedImarisPath();
             if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
-                 [FileName,PathName] = uigetfile('.jar','Location of ImarisLib.jar');
-                 eXT.imarisLibPath = [PathName, FileName];
-                 setSavedImarisLib(eXT.imarisLibPath);
+                 [FileName,PathName] = uigetfile('.exe','Location of Imaris executable');
+                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
+                 setSavedImarisPath(eXT.imarisLibPath);
             end
             % Start Imaris Connection
             javaaddpath(eXT.imarisLibPath);
@@ -1118,63 +1122,7 @@ classdef EasyXT
            end     
                 SetColor(eXT,spots, color);
         end
-        
-        function folderRef = CreateGroup(eXT, name)
-            % Create folder
-            folderRef = eXT.ImarisApp.GetFactory.CreateDataContainer;
-            folderRef.SetName(name);
-        end
-        
-        function RunXtension(eXT, name)
-            addpath('C:\Program Files\Bitplane\Imaris x64 7.6.5\XT\matlab');
-            eval([name '(eXT.ImarisApp);']);
-        end
-        
-        function GaussianSmooth(eXT, channel, sigma, varargin)
-            %% GAUSSIANSMOOTH Smoothes the selected channel by a gaussian
-            % GAUSSIANSMOOTH(channel, sigma, 'Duplicate', true smooths a
-            % channel with a gaussian kernel of sigma. If 'Duplicate'
-            % parameter value is set to false, then it will overwrite the
-            % existing channel
-            
-            duplicate = true;
-            for i=1:2:length(varargin)
-                switch varargin{i}
-                    case 'Duplicate'
-                        duplicate =  varargin{i+1};
-                    otherwise
-                        error(['Unrecognized Command:' varargin{i}]);
-                end
-            end
-            
-            vData = eXT.ImarisApp.GetDataSet;
-            %Duplicate the channel
-            channelName = char(vData.GetChannelName(channel-1));
-            color= vData.GetChannelColorRGBA(channel-1);
-            if (duplicate)
-                chString = strcat('ch', num2str(channel));
-                exp = {chString};
-                c = GetSize(eXT, 'C');
-                ChannelMath(eXT, exp);
-            end
-            % Now smooth it.
-            c = GetSize(eXT, 'C')-1;
-            
-            eXT.ImarisApp.GetImageProcessing.GaussFilterChannel(vData,c,sigma);
-            vData.SetChannelName(c, [channelName ' Gaussian Sigma ' num2str(sigma)]);
-            vData.SetChannelColorRGBA(c, color);
-            
-        end
-        
-        function [pathstr,name,ext] = GetCurrentFileName(eXT) 
-            %% GetCurrentFileName returns the surrent file name path and extension
-            % [pathstr,name,ext] = GetCurrentFileName() has no arguments and returns the same variables
-            % as the fileparts function 
-            % see also FILEPARTS
-            fullPath = char(eXT.ImarisApp.GetCurrentFileName());
-            [pathstr,name,ext] = fileparts(fullPath);
-        end
-        
+                
         function newPoints = CreateMeasurementPoints(eXT, XYZ, varargin)
             %% CREATEMEASUREMENTPOINTS Creates new Measurement Points with default parameters
             % newPoints = CREATEMEASUREMENTPOINTS(XYZ, 'Name', name, ...
@@ -1248,6 +1196,78 @@ classdef EasyXT
     end
     %% Helper and Type converting functions
     methods
+        
+        function folderRef = CreateGroup(eXT, name)
+            %% Create a group
+            folderRef = eXT.ImarisApp.GetFactory.CreateDataContainer;
+            folderRef.SetName(name);
+        end
+        
+        function RunXtension(eXT, name)
+            addpath([imarisPath 'XT\matlab']);
+            eval([name '(eXT.ImarisApp);']);
+        end
+        
+        function GaussianSmooth(eXT, channel, sigma, varargin)
+            %% GAUSSIANSMOOTH Smoothes the selected channel by a gaussian
+            % GAUSSIANSMOOTH(channel, sigma, 'Duplicate', true smooths a
+            % channel with a gaussian kernel of sigma. If 'Duplicate'
+            % parameter value is set to false, then it will overwrite the
+            % existing channel
+            
+            duplicate = true;
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Duplicate'
+                        duplicate =  varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            vData = eXT.ImarisApp.GetDataSet;
+            %Duplicate the channel
+            channelName = char(vData.GetChannelName(channel-1));
+            color= vData.GetChannelColorRGBA(channel-1);
+            if (duplicate)
+                chString = strcat('ch', num2str(channel));
+                exp = {chString};
+                c = GetSize(eXT, 'C');
+                ChannelMath(eXT, exp);
+            end
+            % Now smooth it.
+            c = GetSize(eXT, 'C')-1;
+            
+            eXT.ImarisApp.GetImageProcessing.GaussFilterChannel(vData,c,sigma);
+            vData.SetChannelName(c, [channelName ' Gaussian Sigma ' num2str(sigma)]);
+            vData.SetChannelColorRGBA(c, color);
+            
+        end
+        
+        function [pathstr,name,ext] = GetCurrentFileName(eXT) 
+            %% GetCurrentFileName returns the surrent file name path and extension
+            % [pathstr,name,ext] = GetCurrentFileName() has no arguments and returns the same variables
+            % as the fileparts function 
+            % see also FILEPARTS
+            fullPath = char(eXT.ImarisApp.GetCurrentFileName());
+            [pathstr,name,ext] = fileparts(fullPath);
+        end
+        
+        function sel = SelectDialog(eXT, theType) 
+            nGr = GetNumberOf(eXT,theType);
+            groupNames={};
+            if nGr > 1
+                for i=1:nGr
+                    grp = eXT.GetObject('Type', theType, 'Number',i);
+                    groupNames{i} = eXT.GetName(grp);
+                end
+            end
+
+            [sel,ok] = listdlg('ListString', groupNames, ...
+                               'SelectionMode', 'single', ...
+                               'Name', ['Select one of the ' theType], ...
+                               'OKString', 'Select' );
+        end
         
         function obj = GetImarisObject(eXT, object, cast)
             %% GETIMARISOBJECT Casts the object to its more specific type if cast is true
@@ -1455,7 +1475,7 @@ classdef EasyXT
     
 
     
-    %% Methods in need of comments
+    %% Statistics Related Methods
     methods
         
         
@@ -1651,19 +1671,19 @@ function [aData, aSize, aMin, aMax, aType] = GetDataSetData(aDataSet)
     aType = aDataSet.GetType;
 end
 
-function libPath = getSavedImarisLib()
+function libPath = getSavedImarisPath()
     confFile = fopen('config.txt','r');
     if confFile==-1 
         libPath = '';
     else
-        libPath = fscanf(confFile, 'ImarisLib: %s\n');
+        libPath = fscanf(confFile, 'ImarisPath: %s\n');
         fclose(confFile);
     end
 end
 
-function setSavedImarisLib(libPath)
+function setSavedImarisPath(imPath)
     confFile = fopen('config.txt','w');
-    fprintf (confFile, 'ImarisLib: %s\n', libPath);
+    fprintf (confFile, 'ImarisPath: %s\n', imPath);
     fclose(confFile);
 end
 
