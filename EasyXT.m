@@ -58,8 +58,14 @@ classdef EasyXT
             if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
                  [FileName,PathName] = uigetfile('.exe','Location of Imaris executable');
                  eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
-                 setSavedImarisPath(eXT.imarisLibPath);
+
+                 eXT.imarisPath = PathName;
+                 setSavedImarisPath(eXT.imarisPath);
             end
+            
+            eXT.imarisPath = getSavedImarisPath();
+            eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
+
             % Start Imaris Connection
             javaaddpath(eXT.imarisLibPath);
             
@@ -1273,7 +1279,7 @@ classdef EasyXT
         end
         
         function RunXtension(eXT, name)
-            addpath([imarisPath 'XT\matlab']);
+            addpath([eXT.imarisPath 'XT\matlab']);
             eval([name '(eXT.ImarisApp);']);
         end
         
@@ -1542,7 +1548,172 @@ classdef EasyXT
     
     end
     
+    %% Colocalization chunk
+    
+    methods
+        function [pearsons, manders, ica, fluorogram] = GetColoc(eXT, ch1, ch2, varargin)
+            vDataSet = eXT.ImarisApp.GetDataSet;
+            thr1 = 0;
+            thr2 = 0;
+            nT = eXT.GetSize('T');
+            T = 1:nT;
+            addChannel = false;
+            doHist = true;
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Thr1'
+                        thr1 = varargin{i+1};
+                    case 'Thr2'
+                        thr2 = varargin{i+1};
+                    case 'Show Histogram'
+                        doHist = varargin{i+1};
+                    case 'T'
+                        T = varargin{i+1};                    
+                    case 'Add Channel'
+                        addChannel = varargin{i+1};
+                        
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            % Channel Names
+            ch1Name = char(vDataSet.GetChannelName(ch1-1));
+            ch2Name = char(vDataSet.GetChannelName(ch2-1));
+            
+            if addChannel
+                vDataSet.SetSizeC(eXT.GetSize('C')+1);
+               
+                colocC = eXT.GetSize('C')-1;
+                dType = eXT.GetDataType();
+                cName = sprintf('Coloc Volume %s vs. %s, Thr1 %d, Thr2 %d', ch1Name, ch2Name, thr1, thr2);
+                vDataSet.SetChannelName (colocC, cName);
 
+
+            end
+            
+            for t=T
+                % Get the channels, slightly blur them first
+                ch1V = vDataSet.GetDataVolumeFloats(ch1-1, t-1);
+                ch2V = vDataSet.GetDataVolumeFloats(ch2-1, t-1);
+                
+                % Blurring
+                %ch1V = imfilter(ch1V, fspecial('gaussian', [5,5], 2.0));
+                %ch2V = imfilter(ch2V, fspecial('gaussian', [5,5], 2.0));
+                
+                ch1 = reshape(ch1V,[],1);
+                ch2 = reshape(ch2V,[],1);
+                % ch1 = vDataSet.GetDataVolumeAs1DArrayFloats (ch1-1, t-1);
+                % ch2 = vDataSet.GetDataVolumeAs1DArrayFloats (ch2-1, t-1);
+                
+                % Stats TODO =============================================
+                sum(ch1(ch1>thr1))
+                sum(ch2(ch2>thr2))
+                %sum(ch1(ch1>thr1) & ch2(ch2>thr2))
+                colocI = ch1>=thr1 & ch2>=thr2;
+                
+                meanCh1 = mean(ch1)
+                meanCh1Thr = mean(ch1(colocI))
+                
+                meanCh2 = mean(ch2)
+                meanCh2Thr = mean(ch2(colocI))
+                
+                r= sum( (ch1-meanCh1) .* (ch2-meanCh2) ) 
+                r2 = sqrt(sum( (ch1-meanCh1).^2)) .* sqrt(sum( (ch2-meanCh2).^2 ))
+                
+                
+                
+                rf = r/r2
+                r = corr(ch1, ch2)
+                
+   
+                r= sum( (ch1(colocI)-meanCh1Thr) .* (ch2(colocI)-meanCh2Thr) ) 
+                r2 = sqrt(sum( (ch1(colocI)-meanCh1Thr).^2)) .* sqrt(sum( (ch2(colocI)-meanCh2Thr).^2 ))
+                
+                rf = r/r2
+                
+                r1= corr(ch1(colocI), ch2(colocI))
+                % Stats TODO =============================================
+
+                                
+                % Display a histogram, if they want.
+                if doHist
+                    maxVal1 = max(ch1);
+                    maxVal2 = max(ch2);
+                    maxVal = max(maxVal2, maxVal1);
+                    
+                    % Blurring
+                    
+                    ch1V = smooth3(ch1V ./ maxVal .* 255, 'gaussian', 5, 1.0);
+                    ch2V = smooth3(ch2V ./ maxVal .* 255, 'gaussian', 5, 1.0);
+
+                    ch1 = reshape(ch1V,[],1);
+                    ch2 = reshape(ch2V,[],1);
+                    
+                    
+                    % Format input for hist3
+                    dat = ([ch1, ch2]);
+                    
+                    ctrs = {0:256+0.5 , 0:256+0.5};
+                    % This seems to cause a problem where 
+                    
+                    n = hist3(dat, ctrs);
+                    n1 = log10(n'+1);
+                    n1(size(n,1) + 1, size(n,2) + 1) = 0;
+                    xb = linspace(0,maxVal,size(n,1)+1);
+                    yb = linspace(0,maxVal,size(n,1)+1);
+                    h = pcolor(xb,yb,n1);
+
+                    cm = colormap(jet);
+                    cm(1,:) = [0,0,0];
+                    colormap(cm);
+                    set(h, 'EdgeColor', 'none');
+                    [cmin cmax] = caxis;
+                    caxis([0,cmax*0.75]);
+                    cb = colorbar;
+                    % Tick mark positions
+                    L = [0 1 10 100 1000 10000 100000, 1000000];
+                    l = log10(L+1); 
+                    set(cb,'YTick',l, 'YTicklabel',L);
+                    cb.Label.String = 'Pixel Counts';
+                    title(sprintf('Fluorogram %s vs. %s', ch1Name, ch2Name));
+                    xlabel(ch1Name);
+                    ylabel(ch2Name);
+                    
+                    % Show thresholds
+                    thr1Rect = thr1 / maxVal *255;
+                    thr2Rect = thr2 / maxVal *255;
+                    
+                    rectangle('Position',[thr1Rect thr2Rect maxVal-thr1Rect maxVal-thr2Rect], 'LineWidth',2, 'EdgeColor','y');
+
+                end
+                
+
+                if addChannel
+                    % Build the coloc channel
+                    colocVol = (ch1+ch2) ./ 2;
+                    colocVol(~colocI) = 0;
+                    
+                    switch dType
+                        case '8-bit'
+                            vDataSet.SetDataVolumeBytes(uint8(reshape(colocVol,size(ch1V))), colocC, t-1);
+                        case '16-bit'
+                            vDataSet.SetDataVolumeShorts(uint16(reshape(colocVol,size(ch1V))), colocC, t-1);             
+                        case '32-bit'
+                            vDataSet.SetDataVolumeFloats(float(reshape(colocVol,size(ch1V))), colocC, t-1);             
+                    end
+                end
+                
+                
+                
+            end
+            
+
+        end
+        
+    
+    end
+    
     
     %% Statistics Related Methods
     methods
@@ -1761,7 +1932,8 @@ function libPath = getSavedImarisPath()
     if confFile==-1 
         libPath = '';
     else
-        libPath = fscanf(confFile, 'ImarisPath: %s\n');
+        rawPath = fgetl(confFile);
+        libPath = rawPath(13:end);
         fclose(confFile);
     end
 end
