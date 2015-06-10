@@ -1269,7 +1269,17 @@ classdef EasyXT
         function folderRef = CreateGroup(eXT, name)
             %% Create a group
             folderRef = eXT.ImarisApp.GetFactory.CreateDataContainer;
-            folderRef.SetName(name);
+            % Check name doesn't already exist
+            newName = name;
+            obj = GetObject(eXT,'Name', name);
+            k=1;
+            while (~isempty(obj))
+                newName = sprintf('%s -%i',name, k);
+                obj = GetObject(eXT, 'Name', newName);
+                k=k+1;
+
+            end
+            folderRef.SetName(newName);
         end
         
         function RunXtension(eXT, name)
