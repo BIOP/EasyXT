@@ -1,4 +1,4 @@
-classdef EasyXT
+classdef EasyXT < handle
     %%EASYXT Simplified commands to access Imaris Interface
     %   We're wrapping up some common funtions of Imaris so as to simplify
     %   the creation of XTensions. Access to most functions is simplified
@@ -21,7 +21,7 @@ classdef EasyXT
     %     This program is distributed in the hope that it will be useful,
     %     but WITHOUT ANY WARRANTY; without even the implied warranty of
     %     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    %     GNU General Public License for more details.
+    %     GNU General Public License for more details.co
     % 
     %     You should have received a copy of the GNU General Public License
     %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -44,12 +44,18 @@ classdef EasyXT
     methods
         function eXT = EasyXT(varargin)
             %% EASYXT builds a new EasyXT object
-            % eXT = EASYXT(imarisApplication)
-            % builds a new EasyXT object and connects to an open Imaris
-            % Instance.
-            % Optional input argument: imarisApplicationID
-            % That way you can start easyXT from an Xtension, like you
-            % normally would.
+            % * eXT = EASYXT(imarisApplication) builds a new EasyXT object
+            % and attaches it to the currently running Imaris Instance.
+            % * eXT = EASYXT('setup') prompts the user to define the foler
+            % where the imaris exectuable is. This only needs to be done
+            % once.
+            %
+            % Optional Arguments
+            % o imarisApplicationID - in case you'd like to start EasyXT from
+            % an XTension
+            % o 'setup' - string to announce that you wish to define the
+            % path to Imaris.
+      
             
             % Supress Java Duplicate Class warnings
             warning('off','MATLAB:Java:DuplicateClass');
@@ -66,9 +72,10 @@ classdef EasyXT
             % Create an instance of ImarisLib
             vImarisLib = ImarisLib;
             
+           % Re-enable Java Duplicate Class warnings
             warning('on','MATLAB:Java:DuplicateClass');
 
-            
+            % Attach to given ImarisApplication or create new one
             if nargin == 1 && isa(varargin{1}, 'Imaris.IApplicationPrxHelper')
                 eXT.ImarisApp = varargin{1};
             elseif nargin == 1 && ischar(varargin{1})
@@ -89,6 +96,7 @@ classdef EasyXT
             end
             
             try
+                % Open the Imaris Application
                 eXT.ImarisApp = vImarisLib.GetApplication(ID);
             catch err
                 disp('Could not get Imaris Application with ID');
@@ -106,11 +114,11 @@ classdef EasyXT
         function ImarisObject = GetObject(eXT, varargin)
             %% GETOBJECT recovers an object from the Surpass scene
             % Imarisobject = GETOBJECT('Name', name, ...
-            %                                  'Parent', parent, ...
-            %                                   'Number', number, ...
-            %                                   'Type', type, ...
-            %                                   'Cast', isCast, ...
-            %                                   'Active Selection', isSelection)
+            %                          'Parent', parent, ...
+            %                          'Number', number, ...
+            %                          'Type', type, ...
+            %                          'Cast', isCast
+            %                          )
             %
             % Returns the imaris object defined by the Optional Name,
             % Parent, Number, Type and Cast Parameters.
@@ -138,20 +146,23 @@ classdef EasyXT
             %   example are of a subclass of IDataItem, called ISurfaces.
             %   this property, if set to 'true', returns the object of
             %   the subclass if possible. Otherwise, it returns an IDataItem
-            %   Object.
+            %   Object. Not too useful but good to have in case it's
+            %   needed.
             %       Defaults to [ true ]
             %
             % Examples:
-            %  >> ImarisObj = GetObject(); % Returns the active object
-            %  in the imaris scene
-            %  >> ImarisObj = GetObject('Type', 'Surfaces'); % Returns
-            %  the first surface object
-            %  >> ImarisObj = GetObject('Number', 4); % Returns
-            %  fourth object in the scene.
-            %  >> ImarisObj = GetObject('Type', 'Surfaces', 'Name', 'My Surfaces');
-            %  Returns the first surface object with name 'My Surfaces'.
-            %
-            % See also CREATEGROUP
+            %  %Return the active object in the imaris scene
+            %  ImarisObj = GetObject(); 
+            %  %Returns the first surface object
+            %  spotsObj = GetObject('Type', 'Spots');
+            %  %Returns fourth object in the scene.
+            %  ImarisObj = GetObject('Number', 4);
+            %  %Returns the first surface object with name 'My Surfaces'.
+            %  surfObj = GetObject('Type', 'Surfaces', 'Name', 'My Surfaces');
+            %  %Get the Second Surfaces object inside the folder 'Group 1'
+            %  parentFolder = GetObject('Name', 'Group 1');
+            %  surfObj = GetObject('Type', 'Surfaces', 'Number', 2, 'Parent', parentFolder);
+            % See also CreateGroup
             
             % Define Defaults:
             parent = eXT.ImarisApp.GetSurpassScene;
@@ -224,8 +235,9 @@ classdef EasyXT
         
         function SelectObject(eXT, varargin)
             %% SELECTOBJECT Makes the selected object active on the Surpass Scene
-            % All arguments from GETSELECTEDOBJECT can be applied here
-            % See also GETSELECTEDOBJECT
+            % SELECTOBJECT('Name', name, ...)
+            % All arguments from GetObject can be applied here
+            % See also GetObject
             
             obj = GetObject(eXT, varargin{:});
             eXT.ImarisApp.SetSurpassSelection(obj);
@@ -233,8 +245,27 @@ classdef EasyXT
         end
         
         function number = GetNumberOf(eXT, type, varargin)
-            %% GETNUMBEROF recovers the number of objects with a certain name or type
-            % number = GETNUMBEROF('Name', name, ...
+            %% GETNUMBEROF recovers the number of objects with a certain type
+            % number = GETNUMBEROF(type, 'Name', name, ... )
+            % Arguments 
+            % o type - Type of Object: Spots, Surfaces, Group, Points,
+            % Cells, Filaments, DataSet, Light Source, Camera, Volume,
+            % Clipping Plane, Application
+            % Optional Key, Value Pairs:
+            % o All optional arguments from GetObject can be applied here
+            % 
+            % This function is nice for iterating among objects of the same
+            % kind.
+            %
+            % Example:
+            % nSpots = GetNumberOf('Spots');
+            % for i=1:nSpots
+            %   aSpot = GetObject('Type', 'Spots', 'Number', i);
+            %   % Do something with spot number i here
+            % end
+            %
+            % See also GetObject
+
             parent = eXT.ImarisApp.GetSurpassScene;
             name = [];
             for i=1:2:length(varargin)
@@ -278,15 +309,37 @@ classdef EasyXT
         end
         
         function name = GetName(eXT, object)
+            %% GETNAME returns the name of the object if possible
+            % name = GETNAME(object)
+            % This is mainly for convenience so we never forget to cast the
+            % result of object.GetName to a char()
+            %
+            % Arguments 
+            % o object - The Imaris object whose name you want
+            % See also SetName
+            
             if any(strcmp(methods(object), 'GetName'))
                 name = char(object.GetName);
+            else 
+                name = [];
+                disp('This object has no "GetName" method.')
             end
             
         end
         
         function name = SetName(eXT, object, name)
+            %% SETNAME sets the name of the object if possible
+            % name = SETNAME(object, name)
+            %
+            % Arguments 
+            % o object - The Imaris object whose name you want to set
+            % o name - The name you want to give to the object
+            % See also GetName
+            
             if any(strcmp(methods(object), 'SetName'))
                 object.SetName(name);
+            else 
+                disp('This object has no "SetName" method.')
             end
             
         end
@@ -327,20 +380,45 @@ classdef EasyXT
             
         end
         
+        function color = GetColor(eXT, object)
+            %% GETCOLOR returns the color of the current object as a 4 element vector
+            % color = GETCOLOR(object) checks if there is a getcolor method
+            % available and retuns a 4-element vector as follows:
+            % color(1) : RED
+            % color(2) : GREEN
+            % color(3) : BLUE
+            % color(4) : ALPHA
+            
+             if any(strcmp(methods(object), 'GetColorRGBA'))
+                col = object.GetColorRGBA();
+                color = [];
+                e = 3;
+                for i = fliplr(0:e)
+                    color(i+1) = floor(col ./ (256.^i));
+                    col = col - color(i+1).*256.^i;
+                end
+            else 
+                disp('This object has no "SetName" method.')
+            end
+           
+            
+        end
+        
         function spots = CreateSpots(eXT, PosXYZ, spotSizes, varargin)
             %% CREATESPOTS creates and returns a new spot object
             % spots = CREATESPOTS(posXYZ, spotSizes, ...,
             %                     'Name', name, ...
             %                     'Single Timepoint', isSingle, ...
-            %                     'Time Indexes', t, ...
-            % creates a new spots object with the given xyz positions and
-            % sizes. posXYZ is an nx3 array where each row contains the X,
-            % Y and Z position of the spots, int the unit of the imaris
-            % dataset (Usually microns).
-            % spotSizes is either an nx1 or nx3 array containing the radius
-            % of each spot, making the spot either spherical or defined by
-            % its X Y and Z semi-major axes lenghts. Must be the same size
-            % as posXYZ.
+            %                     'Time Indexes', t, ... )
+            % Creates a new spots object with the given xyz positions and
+            % sizes. 
+            % Input Arguments:
+            %   o posXYZ - an nx3 array where each row contains the X,
+            %   Y and Z position of the spots, in the unit of the imaris
+            %   dataset (Usually microns).
+            %   o spotSizes - either an nx1 or nx3 array containing the radius
+            %   of each spot, making the spot either spherical or defined by
+            %   its X Y and Z semi-major axes lenghts.
             % Optional Parameters:
             %   o Name - The name of the spots object, otherwise it uses
             %   Imaris's default naming scheme (Spots 1, Spots 2, ...)
@@ -383,9 +461,8 @@ classdef EasyXT
                 error('Radii must be either an nx1 array or an nx3 array');
             end
             if size(PosXYZ,2) ~= 3
-                error('XYZ must be nx3 in size...');
+                error('XYZ must be nx3 in size.');
             end
-                       
 
             % Create the spots
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
@@ -403,29 +480,28 @@ classdef EasyXT
         end
         
         function CreateNewScene(eXT)
-    
-         %% Create the surpass scene
-         vSurpassScene = eXT.ImarisApp.GetFactory.CreateDataContainer;
-         vSurpassScene.SetName('Scene');
-         %% Add a light source
-         vLightSource = eXT.ImarisApp.GetFactory.CreateLightSource;
-         vLightSource.SetName('Light source');
-         %% Add a frame (otherwise no 3D rendering)
-         vFrame = eXT.ImarisApp.GetFactory.CreateFrame;
-         vFrame.SetName(strcat('Frame'));
-         %% Add a Volume (otherwise no 3D rendering)
-         vVolume = eXT.ImarisApp.GetFactory.CreateVolume;
-         vVolume.SetName(strcat('Volume'));
-         
-         %% Set up the surpass scene
-         eXT.ImarisApp.SetSurpassScene(vSurpassScene);
-         AddToScene(eXT, vLightSource);
-         AddToScene(eXT, vFrame);
-         AddToScene(eXT, vVolume);
-         
-%          eXT.ImarisApp.GetSurpassScene.AddChild(vLightSource, -1);
-%          vImarisApplication.GetSurpassScene.AddChild(vFrame, -1);
-%          vImarisApplication.GetSurpassScene.AddChild(vVolume, -1);   
+            %% CREATENEWSCENE Creates a new Surpass scene
+            % CreateNewScene() is useful for clearning the current scene in
+            % the case that we are batch opening images, for examples. 
+            
+            vSurpassScene = eXT.ImarisApp.GetFactory.CreateDataContainer;
+            vSurpassScene.SetName('Scene');
+            %% Add a light source
+            vLightSource = eXT.ImarisApp.GetFactory.CreateLightSource;
+            vLightSource.SetName('Light source');
+            %% Add a frame (otherwise no 3D rendering)
+            vFrame = eXT.ImarisApp.GetFactory.CreateFrame;
+            vFrame.SetName(strcat('Frame'));
+            %% Add a Volume (otherwise no 3D rendering)
+            vVolume = eXT.ImarisApp.GetFactory.CreateVolume;
+            vVolume.SetName(strcat('Volume'));
+            
+            %% Set up the surpass scene
+            eXT.ImarisApp.SetSurpassScene(vSurpassScene);
+            AddToScene(eXT, vLightSource);
+            AddToScene(eXT, vFrame);
+            AddToScene(eXT, vVolume);
+            
         end
         
         
@@ -454,7 +530,7 @@ classdef EasyXT
         function RemoveFromScene(eXT, object, varargin)
             %% REMOVEFROMSCENE removes the object from Imaris Scene
             % Optional Parameter/Value pairs
-            %   o Parent - The parent object to remove this object from.
+            %   o Parent - The parent object inside which the object lives.
             parent = eXT.ImarisApp.GetSurpassScene;
             
             for i=1:2:length(varargin)
@@ -1263,6 +1339,105 @@ classdef EasyXT
             
         end
     end
+    
+    %% Colocalization-related Methods
+    methods 
+        function coloc = Coloc(eXT, channels, thresholds, varargin)
+        %% COLOC Implements some basic colocalization formulas
+        % Options: Select timepoint, use some channel as mask
+        % Do Pearsons test, or CDA for ALL parameters
+        % Make coloc channel
+        % Show Fluorogram
+        
+        isMakeColocChannel = false;
+        times = 1:GetSize(eXT, 'T');
+        
+        for i=1:2:length(varargin)
+            switch varargin{i}
+                case 'Coloc Channel'
+                    isMakeColocChannel =  varargin{i+1};
+                case 'Timepoints'
+                    times =  varargin{i+1};
+                case 'Fluorogram'
+                    isFluorogram = true;
+                otherwise
+                    error(['Unrecognized Command:' varargin{i}]);
+            end
+        end
+        
+            % Get the type of dataset
+            dataType = eXT.GetDataType();
+            
+            
+            
+            % Do the coloc for each pair of channels given
+            for nI = 1:size(channels,1)
+                % Coloc in 3D, for each timepoint
+                if(isMakeColocChannel)
+                    eXT.SetSize('C', eXT.GetSize('C')+1);
+                    newC = eXT.GetSize('C');
+                    chNames = eXT.GetChannelNames();
+                    eXT.SetChannelName(newC, sprintf('Colocalization %s and %s', chNames{channels(nI,1)}, chNames{channels(nI,2)}));
+                end
+
+                for nT = 1:GetSize(eXT, 'T');
+                    % Get the voxels for the channels and the mask
+                    switch dataType
+                        case '8-bit'
+                            I1 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayBytes(channels(nI,1)-1, nT-1),'uint8');
+                            I2 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayBytes(channels(nI,2)-1, nT-1),'uint8');
+                        case '16-bit'
+                            I1 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayShorts(channels(nI,1)-1, nT-1), 'uint16');
+                            I2 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayShorts(channels(nI,2)-1, nT-1), 'uint16');
+                        case '32-bit'
+                            I1 = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayFloats(channels(nI,1)-1, nT-1);
+                            I2 = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayFloats(channels(nI,2)-1, nT-1);
+                        otherwise
+                            I1 = [];
+                            I2 = [];
+
+                    end
+
+
+                    
+                   C = getColocCoeffs(I1, I2, thresholds)
+                    
+                    % Threshold each channel
+
+                    % Apply Mask channel
+
+                    % Get Manders, Pearsons, k, Li, Regression...
+                    
+                    if(isMakeColocChannel)
+                        
+                        % Make Coloc Channel
+                        colocArray1D = getColocChannel(I1, I2, thresholds);
+
+                        switch dataType
+                            case '8-bit'
+                                eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayBytes(colocArray1D, newC-1, nT-1);
+                            case '16-bit'
+                                eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayShorts(colocArray1D, newC-1, nT-1);
+                            case '32-bit'
+                                eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayFloats(colocArray1D, newC-1, nT-1);
+                        end
+                        
+                        % Get the names of the channels
+                        chNames = eXT.GetChannelNames();
+                        eXT.SetChannelName(newC, sprintf('Colocalization %s and %s', chNames{channels(nI,1)}, chNames{channels(nI,2)}));
+                        
+                    end
+                    
+                    % Make Fluorogram
+                    getFluorogram(I1, I2, thresholds, true);
+                    % Run Coloc Test(s)
+                end
+
+            end
+        end
+          
+    end
+    
     %% Helper and Type converting functions
     methods
         
@@ -1332,20 +1507,39 @@ classdef EasyXT
             [pathstr,name,ext] = fileparts(fullPath);
         end
         
-        function sel = SelectDialog(eXT, theType) 
+        function [name number] = SelectDialog(eXT, theType, varargin)
+            %% SelectDialog gives a list of available objects of the given type
+            % The user can then select one or several names and numbers to
+            % be used with GetObject.
+            
+            parent = eXT.ImarisApp.GetSurpassScene;
+            selMode = 'single';
+             for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Parent'
+                        parent =  varargin{i+1};
+                    case 'Select Mode'
+                        selMode = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+             end
+            
             nGr = GetNumberOf(eXT,theType);
             groupNames={};
             if nGr > 1
                 for i=1:nGr
-                    grp = eXT.GetObject('Type', theType, 'Number',i);
+                    grp = eXT.GetObject('Type', theType, 'Number',i, 'Parent', parent);
                     groupNames{i} = eXT.GetName(grp);
                 end
             end
 
             [sel,ok] = listdlg('ListString', groupNames, ...
-                               'SelectionMode', 'single', ...
-                               'Name', ['Select one of the ' theType], ...
+                               'SelectionMode', selMode, ...
+                               'Name', ['Select the ' theType], ...
                                'OKString', 'Select' );
+            name = groupNames(sel);
+            number = sel;
         end
         
         function obj = GetImarisObject(eXT, object, cast)
@@ -1524,6 +1718,13 @@ classdef EasyXT
             end
         end
         
+        function SetChannelName(eXT, channel, name)
+            if eXT.GetSize('C') >= channel
+                eXT.ImarisApp.GetDataSet.SetChannelName(channel-1, name);
+            else
+                disp(sprintf('Channel %d does not exist. Dataset has %d channels', channel, eXT.GetSize('C')));
+            end
+        end
         function color = GetChannelColor(eXT, number)
             color = eXT.ImarisApp.GetDataSet.GetChannelColorRGBA(number-1);
             
@@ -1782,5 +1983,109 @@ function setSavedImarisPath(imPath)
     fclose(confFile);
 end
 
+%% Coloc Helpers
+function C = getColocCoeffs(I1, I2, thresholds)
+    I1 = double(I1);
+    I2 = double(I2);
+    
+    idx = find(I1>=(thresholds(1)) & I2>=(thresholds(2)));
+    C.nVoxels = size(I1,1);
+    C.nVoxelsColoc = size(idx,1);
+    
+    C.percentColoc = C.nVoxelsColoc / size (I1,1) *100;
+    
+    idx1 = find(I1>=(thresholds(1)));
+    idx2 = find(I2>=(thresholds(2)));
+    
+    Rp = corr(I1(idx), I2(idx));
+    Rs = corr(I1(idx), I2(idx),'type', 'Spearman');
+    
+    C.Pearsons = Rp;
+    C.Spearman = Rs;
+    
 
+    C.M1 = sum(I1(I2>0)) ./ sum(I1);
+    C.M2 = sum(I2(I1>0)) ./ sum(I2);
+    
+    C.M1t = sum(I1(idx2)) ./ sum(I1);
+    C.M2t = sum(I2(idx1)) ./ sum(I2);
+    
+    C.MOC = sum(I1 .* I2) ./ sqrt(sum(I1.^2)*sum(I2.^2));
+    C.k1 = sum(I1 .* I2 ) ./ sum(I1.^2);
+    C.k2 = sum(I1 .* I2 ) ./ sum(I2.^2);
+    
+    % Li ICQ, graphs too?
+    EI1 = mean(I1);
+    EI2 = mean(I2);
+    
+    EI1t = mean(I1(idx));
+    EI2t = mean(I2(idx));
+
+    nPxInt = sum( ( (I1 - EI1).*(I2 - EI2) ) > 0 );
+    nPxTot = sum( ( (I1 - EI1).*(I2 - EI2) ) ~= 0 );
+    
+    nPxIntt = sum( ( (I1(idx) - EI1t).*(I2(idx) - EI2t) ) > 0 );
+    nPxTott = sum( ( (I1(idx) - EI1t).*(I2(idx) - EI2t) ) ~= 0 );
+        
+    C.ICQ  = nPxInt ./ nPxTot - 0.5;
+    C.ICQt = nPxIntt ./ nPxTott - 0.5;
+    
+    % Not Based on Intensities
+    C.Mo1 = size (idx,1) ./ size(idx1,1);
+    C.Mo2 = size (idx,1) ./ size(idx2,1);
+    
+end
+
+
+function F = getFluorogram(I1,I2, thresholds, ishow)
+    %Prepare for hist3
+    X = [I1 I2];
+    size(X)
+    M = max(X);
+    m = double(max(M));
+    if (m <= 255)
+        m = 255;
+    end
+    
+    centers{1} = linspace(0,m,256);
+    centers{2} = linspace(0,m,256);
+    
+    N = hist3(X,centers);
+
+    
+    imagesc(log(N'));
+    axis image;
+    axis xy;
+    xlim([0,255]);
+    ylim([0, 255]);
+    cmap = colormap(jet);
+    cmap(1,:) = [0 0 0];
+    colormap(cmap);
+    colorbar;
+    % Show Thresholds
+    hold on;
+    t = thresholds./m.*256;
+    
+    line([0,255],[t(2),t(2)],'Color','w','LineWidth',2)
+    line([t(1),t(1)],[0,255],'Color','w','LineWidth',2)
+    set(gca, 'CLim', [0, 0.75*max(max(log(N)))]);
+
+end
+
+function dataVolume1D = getColocChannel(I1, I2, thresholds)
+    tf = (I1>=(thresholds(1)) & I2>=(thresholds(2)));
+    dataVolume1D = sqrt(double(I1).^2 + double(I2).^2);
+    if isa(I1, 'uint8')
+        dataVolume1D = uint8(dataVolume1D);
+    else
+        if isa(I1, 'uint16')
+            dataVolume1D = uint16(dataVolume1D);
+
+        end
+    end
+        
+    dataVolume1D(~tf) = 0;
+
+    
+end
 
