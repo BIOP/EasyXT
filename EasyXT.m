@@ -1757,7 +1757,50 @@ classdef EasyXT < handle
     
     %% Statistics Related Methods
     methods
-        
+        function AddStatistic(eXT, object, name, values, varargin) 
+            units = '';
+
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Units'
+                        units = varargin{i+1};
+                    case 'Time'
+                        time = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            vAllStatistics = object.GetStatistics;
+            ids= vAllStatistics.mIds;
+            nEl = numel(unique(ids(ids>=0)));
+            unique(ids(ids>=0))
+            
+            newStatFactorNames = {'Category'};
+            newStatFactors(1:nEl) = {'Custom'};
+            
+            
+            %Add new statistic
+            try
+                newStatNames   = cell(nEl, 1);
+                newStatValues  = 1:nEl;
+                newStatUnits   = cell(nEl, 1);
+                newStatIds     = 1:nEl;
+                for j = 1:nEl
+                    newStatNames{j}      = name;
+                    newStatValues(j)     = values(j);
+                    newStatUnits{j}      = units;
+                    newStatIds(j)        = ids(j);
+                end
+                object.AddStatistics(newStatNames, newStatValues, ...
+                                     newStatUnits, newStatFactors, ...
+                                     newStatFactorNames, newStatIds);
+            catch er
+                rethrow(er)
+                error('Error in adding statistic');
+            end
+            
+        end
         
         function [stats] = GetSelectedStatistics(eXT, object, selectedStatistic, varargin)
             %% GETSELECTEDSTATISTICS returns the selected stats
