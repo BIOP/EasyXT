@@ -1660,6 +1660,24 @@ classdef EasyXT < handle
             z = aVoxelSize(3);
         end
         
+        function [datasize, extentMin, extentMax] = GetExtents(eXT, varargin)
+            
+            aDataSet = eXT.ImarisApp.GetDataSet;
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'DataSet'
+                        aDataSet =  varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            extentMin = [aDataSet.GetExtendMinX, aDataSet.GetExtendMinY, aDataSet.GetExtendMinZ];
+            extentMax = [aDataSet.GetExtendMaxX, aDataSet.GetExtendMaxY, aDataSet.GetExtendMaxZ];
+            datasize  = [aDataSet.GetSizeX, aDataSet.GetSizeY, aDataSet.GetSizeZ];
+        end
+        
         function size = GetSize(eXT, size)
             vDataSet = eXT.ImarisApp.GetDataSet;
             
