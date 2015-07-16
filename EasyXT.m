@@ -1348,10 +1348,11 @@ classdef EasyXT < handle
         % Do Pearsons test, or CDA for ALL parameters
         % Make coloc channel
         % Show Fluorogram
+        % Documentation not finished... sorry
         
         isMakeColocChannel = false;
         times = 1:GetSize(eXT, 'T');
-        
+        isFluorogram = false;
         for i=1:2:length(varargin)
             switch varargin{i}
                 case 'Coloc Channel'
@@ -1400,7 +1401,7 @@ classdef EasyXT < handle
 
 
                     
-                   C = getColocCoeffs(I1, I2, thresholds)
+                   coloc = getColocCoeffs(I1, I2, thresholds);
                     
                     % Threshold each channel
 
@@ -1429,7 +1430,9 @@ classdef EasyXT < handle
                     end
                     
                     % Make Fluorogram
-                    getFluorogram(I1, I2, thresholds, true);
+                    if(isFluorogram)
+                        getFluorogram(I1, I2, thresholds, true);
+                    end
                     % Run Coloc Test(s)
                 end
 
