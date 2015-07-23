@@ -62,7 +62,7 @@ classdef EasyXT < handle
             
             lib = getSavedImarisPath();
             if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
-                 [FileName,PathName] = uigetfile('.exe','Location of Imaris executable');
+                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
                  eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
                  setSavedImarisPath(eXT.imarisLibPath);
             end
@@ -189,7 +189,7 @@ classdef EasyXT < handle
                 end
             end
             
-            object = [];
+            object = []; %#ok<*NASGU>
             ImarisObject = [];
             if nargin==1
                 % Return the active selection
@@ -308,7 +308,7 @@ classdef EasyXT < handle
             
         end
         
-        function name = GetName(eXT, object)
+        function name = GetName(~, object)
             %% GETNAME returns the name of the object if possible
             % name = GETNAME(object)
             % This is mainly for convenience so we never forget to cast the
@@ -327,7 +327,7 @@ classdef EasyXT < handle
             
         end
         
-        function name = SetName(eXT, object, name)
+        function name = SetName(~, object, name)
             %% SETNAME sets the name of the object if possible
             % name = SETNAME(object, name)
             %
@@ -344,7 +344,7 @@ classdef EasyXT < handle
             
         end
         
-        function SetColor(eXT, object, colors)
+        function SetColor(~, object, colors)
             %% SETCOLOR sets the color of the object passed as argument
             % SETCOLOR(object, colors) Takes an array that can be of the following forms
             %   - a 1x3 array with each element being an integer between
@@ -380,7 +380,7 @@ classdef EasyXT < handle
             
         end
         
-        function color = GetColor(eXT, object)
+        function color = GetColor(~, object)
             %% GETCOLOR returns the color of the current object as a 4 element vector
             % color = GETCOLOR(object) checks if there is a getcolor method
             % available and retuns a 4-element vector as follows:
@@ -394,7 +394,7 @@ classdef EasyXT < handle
                 color = [];
                 e = 3;
                 for i = fliplr(0:e)
-                    color(i+1) = floor(col ./ (256.^i));
+                    color(i+1) = floor(col ./ (256.^i)); %#ok<*AGROW>
                     col = col - color(i+1).*256.^i;
                 end
             else 
@@ -619,7 +619,7 @@ classdef EasyXT < handle
                 vDataSet = eXT.ImarisApp.GetDataSet.Clone;
             end
             % Get some info from the scene
-            [aData, aSize, aMin, aMax, aType] = GetDataSetData(vDataSet);
+            [aData, aSize, aMin, aMax, ~] = GetDataSetData(vDataSet);
             
             % Make sure the object is a surface
             if strcmp(eXT.GetImarisType(surface), 'Surfaces')
@@ -765,7 +765,7 @@ classdef EasyXT < handle
             isAddChannel = true;
             spotIDs = 'All';
             time = [];
-            vDataSet = []
+            vDataSet = [];
             for i=1:2:length(varargin)
                 switch varargin{i}
                     case 'IDs'
@@ -807,7 +807,7 @@ classdef EasyXT < handle
                 vDataSet = eXT.ImarisApp.GetDataSet.Clone;
             end
             
-            [aData, aSize, aMin, aMax, vType] = GetDataSetData(vDataSet);
+            [aData, ~, aMin, aMax, vType] = GetDataSetData(vDataSet);
             
             
             % Prepare the new channel.
@@ -1061,7 +1061,7 @@ classdef EasyXT < handle
             end
             
             if isempty(gb)
-                [voxelXY, voxelZ] = eXT.getVoxelSize();
+                [voxelXY, ~] = eXT.getVoxelSize();
                 gb = voxelXY*2;
             end
             
@@ -1078,8 +1078,7 @@ classdef EasyXT < handle
             SetColor(eXT, surface, color);
         end
         
-        function channelNumber = CreateSurfaceIDChannel(eXT, surfaceObj)
-            
+        function channelNumber = CreateSurfaceIDChannel(eXT, surfaceObj)    
             % Create a new channel and for each surface object create a
             dataSet = eXT.ImarisApp.GetDataSet();
             
@@ -1121,21 +1120,24 @@ classdef EasyXT < handle
         
         function spots = DetectSpots(eXT, channel, varargin)
             %%DETECTSPOTS Applies the Imaris Spots Detection Functions
-            % spot = DETECTSPOTS(channel, 'Name', surfaceName, ...
-            %                                  'Color', color, ...
-            %                                  'Diameter XY', dXY, ...
-            %                                  'Diameter Z', dZ, ...
-            %                                  'Subtract BG, isSubtractBG, ...
-            %                                  'Local Contrast', isLocContrast, ...
-            %                                  'Spots Filter', filterString, ...
-            %                                  'Seed Diameter', seedD, ...
-            %                                  'Seed Local Contrast', isSeedLocC, ...
-            %                                  'Seed Filter', seedFilterString, ...
-            %                                  'DataSet', aDataSet, ...
-            % Detects a spots from channel channel with optinal
+            % spot = DETECTSPOTS(channel, 'Name', spotName, ...
+            %                             'Color', color, ...
+            %                             'Diameter XY', dXY, ...
+            %                             'Diameter Z', dZ, ...
+            %                             'Subtract BG, isSubtractBG, ...
+            %                             'Local Contrast', isLocContrast, ...
+            %                             'Spots Filter', filterString, ...
+            %                             'Seed Diameter', seedD, ...
+            %                             'Seed Local Contrast', isSeedLocC, ...
+            %                             'Seed Filter', seedFilterString, ...
+            %                             'DataSet', aDataSet
+            %                   )
+            %
+            % Detects a spots from channel channel with optional
             % parameters:
             %   o Name - The name of the new spots object. Defaults to
             %   Imaris standard name.
+            %
             %   o Color - a single value or, 1x3 or 1x4 arrays with the
             %   color in RGBA format.
             %       colors(1) is Red (or gray if color is 1x1)
@@ -1143,34 +1145,41 @@ classdef EasyXT < handle
             %       colors(3) is Blue
             %       colors(4) is transparency (values [0-128])
             %   Defaults to white [255, 255, 255].
+            %
             %   o Diameter XY - the diameter of the spots, usually in
             %   microns, for the spot renderind and detection if using
             %   local contrast. If Diameter Z is not defined, these will be
             %   spherical spots. Defaults to 2x the voxel size in XY
+            %
             %   o Diameter Z - the diameter of the spots in Z, if you want
             %   to detect ellipsoids. Defaults to 2x the voxel size in Z.
+            %
             %   o Subtract BG - Should the spots be detected using a BG
             %   subtraction or from the raw intensities. Defaults to true
+            %
             %   o Region Growing - Logical defining whether you wish to
             %   apply region growing to the spots. Defaults to false.
+            %
             %   o Region Growing Local Contrast - Logical defining whether
             %   to use local contrast or absolute intensity for region
             %   growing. Defaults to true.
+            %
             %   o Region Threshold - Defines the threshold value to use for
             %   the Region Growing step. Defaults to 'Auto'.
+            %
             %   o Diameter From Volume - Logical defining whether the
             %   Region Growing dpot diameters are computed from the volume
             %   of the thresholded regions. Otherwise, the diameter is
             %   calculated from the distance to the region borders.
+            %
             %   o Spots Filter - A string containing the filter you want
             %   to apply to your spots. Example: '"Quality" above 7.000'
             %   Defaults to '"Quality" above automatic threshold'
+            %
             %   o DataSet - Provide the dataset to detect the surfaces in
             %   explicitly. This is useful if you want to update a dataset
             %   with multiple calls to this function, so that you don't
-            %   need to update the Scene every time.
-            %
-            
+            %   need to update the Scene every time.            
             
             % Prepare variables
             useEllipse = false; % used internally only
@@ -1277,6 +1286,21 @@ classdef EasyXT < handle
             % parameters are set, then it creates the points at all
             % timepoints and gives them names like "A", "B, .... "AA",
             % "AB", ..
+            %
+            % Parameters: 
+            % XYZ: nx3 array with the XYZ coordinates of the measurement
+            %      points. 
+            %
+            % Optional 'Key', value pairs:
+            % o 'Name' : String containing the name of the new Measurement
+            %            Points.
+            %
+            % o 'Timepoints' : The timepoints where you want the
+            %                  measurement points to be created make sure
+            %                  that the rows of `XYZ` match the rows of
+            %                  `times`
+            %
+            % o 'Point Names' : An array with the name of each point.
             
             duplicate = true;
             name = [];
@@ -1306,10 +1330,7 @@ classdef EasyXT < handle
                     %Duplicate the points at each timepoint and the times array
                     %as well
                 else
-                    
                     nT = size(times,2);
-                   
-
                 end
                 
                  %For each measurement point, duplicate it for all timepoints
@@ -1342,35 +1363,44 @@ classdef EasyXT < handle
     
     %% Colocalization-related Methods
     methods 
-        function coloc = Coloc(eXT, channels, thresholds, varargin)
-        %% COLOC Implements some basic colocalization formulas
-        % Options: Select timepoint, use some channel as mask
-        % Do Pearsons test, or CDA for ALL parameters
-        % Make coloc channel
-        % Show Fluorogram
-        % Documentation not finished... sorry
-        
-        isMakeColocChannel = false;
-        times = 1:GetSize(eXT, 'T');
-        isFluorogram = false;
-        for i=1:2:length(varargin)
-            switch varargin{i}
-                case 'Coloc Channel'
-                    isMakeColocChannel =  varargin{i+1};
-                case 'Timepoints'
-                    times =  varargin{i+1};
-                case 'Fluorogram'
-                    isFluorogram = true;
-                otherwise
-                    error(['Unrecognized Command:' varargin{i}]);
+        function finalC = Coloc(eXT, channels, thresholds, varargin)
+            %% COLOC Implements some basic colocalization formulas
+            % Options: Select timepoint, use some channel as mask
+            % Do Pearsons test, or CDA for ALL parameters
+            % Make coloc channel
+            % Show Fluorogram
+            % Documentation not finished... sorry
+            
+            isMakeColocChannel = false;
+            times = 1:GetSize(eXT, 'T');
+            isFluorogram = false;
+            mask = [];
+            maskChannel = [];
+            maskThreshold = [];
+            isZIndependent = false;
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Coloc Channel'
+                        isMakeColocChannel =  varargin{i+1};
+                    case 'Timepoints'
+                        times =  varargin{i+1};
+                    case 'Fluorogram'
+                        isFluorogram = true;
+                    case 'Mask Channel'
+                        maskChannel = varargin{i+1};
+                        maskThreshold = 1;
+                    case 'Mask Threshold'
+                        maskThreshold = varargin{i+1};
+                    case 'Independent Z'
+                        isZIndependent = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
             end
-        end
-        
             % Get the type of dataset
             dataType = eXT.GetDataType();
             
-            
-            
+            finalC = struct([]);
             % Do the coloc for each pair of channels given
             for nI = 1:size(channels,1)
                 % Coloc in 3D, for each timepoint
@@ -1378,42 +1408,32 @@ classdef EasyXT < handle
                     eXT.SetSize('C', eXT.GetSize('C')+1);
                     newC = eXT.GetSize('C');
                     chNames = eXT.GetChannelNames();
-                    eXT.SetChannelName(newC, sprintf('Colocalization %s and %s', chNames{channels(nI,1)}, chNames{channels(nI,2)}));
+                    eXT.SetChannelName(newC, sprintf('Colocalization %s (%.1f) and %s (%.1f)', chNames{channels(nI,1)}, thresholds(nI,1), chNames{channels(nI,2)}, thresholds(nI,2)));
                 end
-
-                for nT = 1:GetSize(eXT, 'T');
+                
+                for nT = times
                     % Get the voxels for the channels and the mask
-                    switch dataType
-                        case '8-bit'
-                            I1 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayBytes(channels(nI,1)-1, nT-1),'uint8');
-                            I2 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayBytes(channels(nI,2)-1, nT-1),'uint8');
-                        case '16-bit'
-                            I1 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayShorts(channels(nI,1)-1, nT-1), 'uint16');
-                            I2 = typecast(eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayShorts(channels(nI,2)-1, nT-1), 'uint16');
-                        case '32-bit'
-                            I1 = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayFloats(channels(nI,1)-1, nT-1);
-                            I2 = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayFloats(channels(nI,2)-1, nT-1);
-                        otherwise
-                            I1 = [];
-                            I2 = [];
-
+                    I1 = eXT.GetVoxels(channels(nI,1), 'Time', nT, '1D', true);
+                    I2 = eXT.GetVoxels(channels(nI,2), 'Time', nT, '1D', true);
+                    if ~isempty(maskChannel)
+                        mask = eXT.GetVoxels(maskChannel, 'Time', nT, '1D', true);
+                        mask = mask>maskThreshold;
                     end
-
-
                     
-                   coloc = getColocCoeffs(I1, I2, thresholds);
+                    coloc = getColocCoeffs(eXT, I1, I2,  channels(nI,1), channels(nI,2), thresholds(nI,1), thresholds(nI,2), nT, mask, maskChannel, maskThreshold, isZIndependent);
+                    tmp = struct2table(coloc);
+                    if isempty(finalC)
+                        finalC = tmp;
+                    else
+                        finalC = [finalC; tmp];
+                    end
                     
-                    % Threshold each channel
-
-                    % Apply Mask channel
-
-                    % Get Manders, Pearsons, k, Li, Regression...
                     
                     if(isMakeColocChannel)
                         
                         % Make Coloc Channel
-                        colocArray1D = getColocChannel(I1, I2, thresholds);
-
+                        colocArray1D = getColocChannel(I1, I2, thresholds(nI,:));
+                        
                         switch dataType
                             case '8-bit'
                                 eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayBytes(colocArray1D, newC-1, nT-1);
@@ -1421,21 +1441,16 @@ classdef EasyXT < handle
                                 eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayShorts(colocArray1D, newC-1, nT-1);
                             case '32-bit'
                                 eXT.ImarisApp.GetDataSet.SetDataVolumeAs1DArrayFloats(colocArray1D, newC-1, nT-1);
-                        end
-                        
-                        % Get the names of the channels
-                        chNames = eXT.GetChannelNames();
-                        eXT.SetChannelName(newC, sprintf('Colocalization %s and %s', chNames{channels(nI,1)}, chNames{channels(nI,2)}));
-                        
+                        end                        
                     end
                     
                     % Make Fluorogram
                     if(isFluorogram)
-                        getFluorogram(I1, I2, thresholds, true);
+                        getFluorogram(I1, I2, channels(nI,1), channels(nI,2), thresholds(nI,:), true);
                     end
                     % Run Coloc Test(s)
                 end
-
+                
             end
         end
           
@@ -1443,6 +1458,90 @@ classdef EasyXT < handle
     
     %% Helper and Type converting functions
     methods
+        
+        function V = GetVoxels(eXT, channel, varargin)
+            %% GETVOXELS returns an array of voxels of the selected channel
+            % GETVOXELS(channel) returns a 3D or 4D array (if time) of the
+            % selected channel.
+            % 
+            % Optional 'Key', Value pairs:
+            % o 'Time', time : Returns only the selected timepoint
+            %
+            % o '1D', logical: Returns the voxels as a 1D array
+            %
+            % o 'Slice', slice: Returns only the selected slice
+            
+            is1D = false;
+            slice = [];
+            time = eXT.ImarisApp.GetVisibleIndexT+1;
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Time'
+                        time =  varargin{i+1};
+                    case '1D'
+                        is1D =  varargin{i+1};
+                    case 'Slice'
+                        slice =  varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            dataType = eXT.GetDataType();
+           
+            
+            if ~is1D && isempty(slice)
+                switch dataType
+                    case '8-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeBytes(channel-1, time-1);
+                    case '16-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeShorts(channel-1, time-1);
+                    case '32-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeFloats(channel-1, time-1);
+                    otherwise
+                        V = [];   
+                end
+            elseif ~is1D && ~isempty(slice)
+                
+                switch dataType
+                    case '8-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSliceBytes(slice-1, channel-1, time-1);
+                    case '16-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSliceShorts(slice-1, channel-1, time-1);
+                    case '32-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSliceFloats(slice-1, channel-1, time-1);
+                    otherwise
+                        V = [];
+                end
+
+            elseif is1D && isempty(slice)
+
+                switch dataType
+                    case '8-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayBytes(channel-1, time-1);
+                    case '16-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayShorts(channel-1, time-1);
+                    case '32-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataVolumeAs1DArrayFloats(channel-1, time-1);
+                    otherwise
+                        V = [];
+                end
+            elseif is1D && ~isempty(slice)
+                nx = eXT.GetSize('X');
+                ny = eXT.GetSize('Y');
+                
+                switch dataType
+                    case '8-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSubVolumeAs1DArrayBytes(0,0,slice-1,channel-1, time-1, nx,ny, 1);
+                    case '16-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSubVolumeAs1DArrayShorts(0,0,slice-1,channel-1, time-1, nx,ny, 1);
+                    case '32-bit'
+                        V = eXT.ImarisApp.GetDataSet.GetDataSubVolumeAs1DArrayFloats(0,0,slice-1,channel-1, time-1, nx,ny, 1);
+                    otherwise
+                        V = [];
+                end
+            end
+        end
         
         function folderRef = CreateGroup(eXT, name)
             %% Create a group
@@ -1461,7 +1560,7 @@ classdef EasyXT < handle
         end
         
         function RunXtension(eXT, name)
-            addpath([imarisPath 'XT\matlab']);
+            addpath([eXT.imarisPath 'XT\matlab']);
             eval([name '(eXT.ImarisApp);']);
         end
         
@@ -1510,7 +1609,7 @@ classdef EasyXT < handle
             [pathstr,name,ext] = fileparts(fullPath);
         end
         
-        function [name number] = SelectDialog(eXT, theType, varargin)
+        function [name, number] = SelectDialog(eXT, theType, varargin)
             %% SelectDialog gives a list of available objects of the given type
             % The user can then select one or several names and numbers to
             % be used with GetObject.
@@ -1537,7 +1636,7 @@ classdef EasyXT < handle
                 end
             end
 
-            [sel,ok] = listdlg('ListString', groupNames, ...
+            [sel,~] = listdlg('ListString', groupNames, ...
                                'SelectionMode', selMode, ...
                                'Name', ['Select the ' theType], ...
                                'OKString', 'Select' );
@@ -1719,10 +1818,14 @@ classdef EasyXT < handle
             end
         end
         
-        function names = GetChannelNames(eXT)
+        function name = GetChannelName(eXT,channel)
             vDataSet = eXT.ImarisApp.GetDataSet;
-            for i=1:vDataSet.GetSizeC
-                names{i} = char(vDataSet.GetChannelName(i-1));
+            name = char(vDataSet.GetChannelName(channel-1));
+        end
+        
+       function names = GetChannelNames(eXT)
+            for i=1:eXT.GetSize('C')
+                names{i} = eXT.GetChannelName(i);
             end
         end
         
@@ -1743,7 +1846,7 @@ classdef EasyXT < handle
             if eXT.GetSize('C') >= channel
                 eXT.ImarisApp.GetDataSet.SetChannelName(channel-1, name);
             else
-                disp(sprintf('Channel %d does not exist. Dataset has %d channels', channel, eXT.GetSize('C')));
+                fprintf('Channel %d does not exist. Dataset has %d channels', channel, eXT.GetSize('C'))
             end
         end
         function color = GetChannelColor(eXT, number)
@@ -1768,17 +1871,12 @@ classdef EasyXT < handle
             % recorded...
             % Normally I would have used:
             % eXT.ImarisApp.GetDataSet.SetType(aType);
-        end
-        
-
-    
+        end  
     end
-    
-
     
     %% Statistics Related Methods
     methods
-        function AddStatistic(eXT, object, name, values, varargin) 
+        function AddStatistic(~, object, name, values, varargin) 
             units = '';
 
             for i=1:2:length(varargin)
@@ -1817,13 +1915,12 @@ classdef EasyXT < handle
                                      newStatUnits, newStatFactors, ...
                                      newStatFactorNames, newStatIds);
             catch er
-                rethrow(er)
                 error('Error in adding statistic');
             end
             
         end
         
-        function [stats] = GetSelectedStatistics(eXT, object, selectedStatistic, varargin)
+        function [stats] = GetSelectedStatistics(eXT, object, selectedStatistic, varargin) %#ok<INUSL>
             %% GETSELECTEDSTATISTICS returns the selected stats
             % stats = GETSELECTEDSTATISTICS(object, selectedStat, ...
             %                               'Channel', channel, ...
@@ -1865,7 +1962,7 @@ classdef EasyXT < handle
                 chInd = find(strcmpi('Channel', allStats.factorNames));
                 
                 % Make channel list
-                channelsCell = cellfun(@str2num, allStats.factors(:,chInd),  'UniformOutput', false);
+                channelsCell = cellfun(@str2num, allStats.factors(:,chInd),  'UniformOutput', false); %#ok<FNDSB>
                 emptyIndexes = cellfun(@isempty,channelsCell); 
                 channelsCell(emptyIndexes) = {-1}; % Make empty channels -1, so as to keep them.
                 channelList = cell2mat(channelsCell);
@@ -1876,7 +1973,7 @@ classdef EasyXT < handle
             if ~isempty(time)
                 tInd = find(strcmpi('Time', allStats.factorNames));
                 % Make time list
-                timesCell = cellfun(@str2num, allStats.factors(:,tInd),  'UniformOutput', false);
+                timesCell = cellfun(@str2num, allStats.factors(:,tInd),  'UniformOutput', false); %#ok<FNDSB>
                 emptyIndexes = cellfun(@isempty,timesCell); 
                 timesCell(emptyIndexes) = {-1}; % Make empty times -1, so as to keep them.
                 timeList = cell2mat(timesCell);
@@ -1949,7 +2046,7 @@ classdef EasyXT < handle
             
         end
         
-        function booleanIsImage = isImage(eXT, fileName)
+        function booleanIsImage = isImage(~, fileName)
             %% isImage takes the fileName as argument and returns
             %  1 if the file name ends with an authorized file format
             %  from the list {'czi' 'tif' 'ids' 'lsm'}, or 0.
@@ -1961,7 +2058,7 @@ classdef EasyXT < handle
             % check if the fileName ends with any of the listed files format
             booleanIsImage = any(cell2mat(regexp(fileName,extExpression))) > 0 ;
             if  booleanIsImage
-                disp(sprintf('%s is a file',fileName));
+                fprintf('%s is an image file\n',fileName)
             end
         end
         
@@ -2001,22 +2098,6 @@ function aData = FixType(aData, aType)
 
 end
 
-function [aDataSet, aData, aMin, aMax, aType] = InitNewChannel(aImaris)
-    aDataSet = aImaris.GetDataSet.Clone;
-    aMin = [aDataSet.GetExtendMinX, aDataSet.GetExtendMinY, aDataSet.GetExtendMinZ];
-    aMax = [aDataSet.GetExtendMaxX, aDataSet.GetExtendMaxY, aDataSet.GetExtendMaxZ];
-    vSize = [aDataSet.GetSizeX, aDataSet.GetSizeY, aDataSet.GetSizeZ];
-    if strcmp(aDataSet.GetType, 'eTypeUInt8')
-        aData = zeros(vSize, 'uint8');
-    elseif strcmp(aDataSet.GetType, 'eTypeUInt16')
-        aData = zeros(vSize, 'uint16');
-    else
-        aData = zeros(vSize, 'single');
-    end
-    aDataSet.SetSizeC(aDataSet.GetSizeC + 1);
-    aType = aDataSet.GetType;
-end
-
 function [aData, aSize, aMin, aMax, aType] = GetDataSetData(aDataSet)
     aMin = [aDataSet.GetExtendMinX, aDataSet.GetExtendMinY, aDataSet.GetExtendMinZ];
     aMax = [aDataSet.GetExtendMaxX, aDataSet.GetExtendMaxY, aDataSet.GetExtendMaxZ];
@@ -2048,63 +2129,103 @@ function setSavedImarisPath(imPath)
 end
 
 %% Coloc Helpers
-function C = getColocCoeffs(I1, I2, thresholds)
-    I1 = double(I1);
-    I2 = double(I2);
+function C = getColocCoeffs(eXT, I1, I2, ch1, ch2, thr1, thr2, nT, mask, maskCh, maskThr, isZIndependent )
     
-    idx = find(I1>=(thresholds(1)) & I2>=(thresholds(2)));
-    C.nVoxels = size(I1,1);
-    C.nVoxelsColoc = size(idx,1);
-    
-    C.percentColoc = C.nVoxelsColoc / size (I1,1) *100;
-    
-    idx1 = find(I1>=(thresholds(1)));
-    idx2 = find(I2>=(thresholds(2)));
-    
-    Rp = corr(I1(idx), I2(idx));
-    Rs = corr(I1(idx), I2(idx),'type', 'Spearman');
-    
-    C.Pearsons = Rp;
-    C.Spearman = Rs;
+    sX = eXT.GetSize('X');
+    sY = eXT.GetSize('Y');
+    sZ = 1;
     
 
-    C.M1 = sum(I1(I2>0)) ./ sum(I1);
-    C.M2 = sum(I2(I1>0)) ./ sum(I2);
+    if isZIndependent
+        sZ = numel(I1) ./ (sX.*sY);
+    end
     
-    C.M1t = sum(I1(idx2)) ./ sum(I1);
-    C.M2t = sum(I2(idx1)) ./ sum(I2);
-    
-    C.MOC = sum(I1 .* I2) ./ sqrt(sum(I1.^2)*sum(I2.^2));
-    C.k1 = sum(I1 .* I2 ) ./ sum(I1.^2);
-    C.k2 = sum(I1 .* I2 ) ./ sum(I2.^2);
-    
-    % Li ICQ, graphs too?
-    EI1 = mean(I1);
-    EI2 = mean(I2);
-    
-    EI1t = mean(I1(idx));
-    EI2t = mean(I2(idx));
-
-    nPxInt = sum( ( (I1 - EI1).*(I2 - EI2) ) > 0 );
-    nPxTot = sum( ( (I1 - EI1).*(I2 - EI2) ) ~= 0 );
-    
-    nPxIntt = sum( ( (I1(idx) - EI1t).*(I2(idx) - EI2t) ) > 0 );
-    nPxTott = sum( ( (I1(idx) - EI1t).*(I2(idx) - EI2t) ) ~= 0 );
+    for z = 1:sZ
+        zStart = sX .* sY .* (z-1) + 1;
+        if sZ == 1
+            zEnd = numel(I1);
+        else
+            zEnd = sX .* sY .* z;
+        end
+        I1s = double(I1(zStart:zEnd));
+        I2s = double(I2(zStart:zEnd));
         
-    C.ICQ  = nPxInt ./ nPxTot - 0.5;
-    C.ICQt = nPxIntt ./ nPxTott - 0.5;
-    
-    % Not Based on Intensities
-    C.Mo1 = size (idx,1) ./ size(idx1,1);
-    C.Mo2 = size (idx,1) ./ size(idx2,1);
+        if ~isempty(mask)
+            masks = double(mask(zStart:zEnd));
+            
+        else
+            masks = ones(zEnd - zStart + 1, 1);
+        end
+        
+        idx  = find(I1s>=thr1 & I2s>=thr2 & masks>0);
+        idx1 = find(I1s>=thr1 & masks>0);
+        idx2 = find(I2s>=thr2 & masks>0);
+        
+        C.Channel1(z,1) = ch1;
+        C.Channel2(z,1) = ch2;
+        C.Threshold1(z,1) = thr1;
+        C.Threshold2(z,1) = thr2;
+        if ~isempty(maskCh)
+            C.MaskChannel(z,1) = maskCh;
+            C.MaskThreshold(z,1) = maskThr;
+        end
+        
+        
+        
+        C.nVoxels(z,1) = size(I1s,1);
+        C.nVoxelsColoc(z,1) = size(idx,1);
+
+        C.percentColoc(z,1) = C.nVoxelsColoc(z,1) ./ size (I1s,1) *100;
+        if size(idx,1) > 1
+            Rp = corr(I1s(idx), I2s(idx));
+            Rs = corr(I1s(idx), I2s(idx),'type', 'Spearman');
+        else
+            Rp = NaN;
+            Rs = NaN;
+        end
+
+        C.Pearsons(z,1) = Rp;
+        C.Spearman(z,1) = Rs;
+
+
+        C.M1(z,1) = sum(I1s(I2s>0)) ./ sum(I1s);
+        C.M2(z,1) = sum(I2s(I1s>0)) ./ sum(I2s);
+
+        C.M1t(z,1) = sum(I1s(idx2)) ./ sum(I1s);
+        C.M2t(z,1) = sum(I2s(idx1)) ./ sum(I2s);
+
+        C.MOC(z,1) = sum( I1s .* I2s ) ./ sqrt(sum(I1s.^2)*sum(I2s.^2));
+        C.k1(z,1)  = sum( I1s .* I2s ) ./ sum(I1s.^2);
+        C.k2(z,1)  = sum( I1s .* I2s ) ./ sum(I2s.^2);
+
+        % Li ICQ, graphs too?
+        EI1 = mean(I1s);
+        EI2 = mean(I2s);
+
+        EI1t = mean(I1s(idx));
+        EI2t = mean(I2s(idx));
+
+        nPxInt = sum( ( (I1s - EI1).*(I2s - EI2) ) > 0 );
+        nPxTot = sum( ( (I1s - EI1).*(I2s - EI2) ) ~= 0 );
+
+        nPxIntt = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) > 0 );
+        nPxTott = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) ~= 0 );
+
+        C.ICQ(z,1)  = nPxInt ./ nPxTot - 0.5;
+        C.ICQt(z,1) = nPxIntt ./ nPxTott - 0.5;
+
+        % Not Based on Intensities
+        C.Mo1(z,1) = size (idx,1) ./ size(idx1,1);
+        C.Mo2(z,1) = size (idx,1) ./ size(idx2,1);
+        C.T(z,1) = nT;
+    end
     
 end
 
 
-function F = getFluorogram(I1,I2, thresholds, ishow)
+function F = getFluorogram(I1,I2, ch1, ch2, thresholds, isShow)
     %Prepare for hist3
     X = [I1 I2];
-    size(X)
     M = max(X);
     m = double(max(M));
     if (m <= 255)
@@ -2117,22 +2238,30 @@ function F = getFluorogram(I1,I2, thresholds, ishow)
     N = hist3(X,centers);
 
     
-    imagesc(log(N'));
-    axis image;
-    axis xy;
-    xlim([0,255]);
-    ylim([0, 255]);
-    cmap = colormap(jet);
-    cmap(1,:) = [0 0 0];
-    colormap(cmap);
-    colorbar;
-    % Show Thresholds
-    hold on;
-    t = thresholds./m.*256;
     
-    line([0,255],[t(2),t(2)],'Color','w','LineWidth',2)
-    line([t(1),t(1)],[0,255],'Color','w','LineWidth',2)
-    set(gca, 'CLim', [0, 0.75*max(max(log(N)))]);
+    if isShow
+        figure, imagesc(log(N')+1);
+        axis image;
+        axis xy;
+        xlim([0,m]);
+        ylim([0,m]);
+        xlabel(sprintf('Channel %d',ch1));
+        xlabel(sprintf('Channel %d',ch2));
+        title(sprintf('Fluorogram Ch %d vs. Ch %d', ch1, ch2));
+        
+        cmap = colormap(jet);
+        cmap(1,:) = [0 0 0];
+        colormap(cmap);
+        colorbar;
+        % Show Thresholds
+        hold on;
+        t = thresholds./m.*256;
+
+        line([0,255],[t(2),t(2)],'Color','w','LineWidth',2);
+        line([t(1),t(1)],[0,255],'Color','w','LineWidth',2);
+        set(gca, 'CLim', [0, 0.75*max(max(log(N)))]);
+    end
+    
 
 end
 
