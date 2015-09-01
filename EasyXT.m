@@ -93,16 +93,17 @@ classdef EasyXT < handle
                     disp('Original error below:');
                     rethrow(err);
                 end
-            end
             
-            try
-                % Open the Imaris Application
-                eXT.ImarisApp = vImarisLib.GetApplication(ID);
-            catch err
-                disp('Could not get Imaris Application with ID');
-                disp('Original error below:');
-                rethrow(err);
-                
+            
+                try
+                    % Open the Imaris Application
+                    eXT.ImarisApp = vImarisLib.GetApplication(ID);
+                catch err
+                    disp('Could not get Imaris Application with ID');
+                    disp('Original error below:');
+                    rethrow(err);
+
+                end
             end
         end
         
@@ -1602,14 +1603,20 @@ classdef EasyXT < handle
             
         end
         
-        function newChannel = DistanceTransform(eXT, what, varargin)
+        function newChannel = DistanceTransform(eXT, object, varargin)
             %% DISTANCETRANSFORM applies a distance transform based on the current object
             % DISTANCETRANSFORM(object, 'Type', 'Inside', ...
-            %                           'Name', 'Some Name');
-            
+            %                           'Name', 'Name for Distance Channel');
+            % Optional 'Key', Value pairs:
+            % o 'Type', string : 'Inside' or 'Outside' to define where the
+            % Distance transform takes place
+            %
+            % o 'Name', string: The name of the new channel with the
+            % distance transform
+
             isInside = true;
             type = 'Inside';
-            objName = eXT.GetName(what);
+            objName = eXT.GetName(object);
             customName = '';
                         
             for i=1:2:length(varargin)
@@ -1627,13 +1634,13 @@ classdef EasyXT < handle
                 end
             end
             
-            objType = eXT.GetImarisType(what);
+            objType = eXT.GetImarisType(object);
             
             switch objType
                 case 'Spots'
-                    [newChannel, dataSet] = eXT.MakeChannelFromSpots(what);
+                    [newChannel, dataSet] = eXT.MakeChannelFromSpots(object);
                 case 'Surfaces'
-                    [newChannel, dataSet] = eXT.MakeChannelFromSurfaces(what);
+                    [newChannel, dataSet] = eXT.MakeChannelFromSurfaces(object);
                 otherwise
             end
             
