@@ -93,16 +93,17 @@ classdef EasyXT < handle
                     disp('Original error below:');
                     rethrow(err);
                 end
-            end
             
-            try
-                % Open the Imaris Application
-                eXT.ImarisApp = vImarisLib.GetApplication(ID);
-            catch err
-                disp('Could not get Imaris Application with ID');
-                disp('Original error below:');
-                rethrow(err);
-                
+            
+                try
+                    % Open the Imaris Application
+                    eXT.ImarisApp = vImarisLib.GetApplication(ID);
+                catch err
+                    disp('Could not get Imaris Application with ID');
+                    disp('Original error below:');
+                    rethrow(err);
+
+                end
             end
         end
         
@@ -308,7 +309,7 @@ classdef EasyXT < handle
             
         end
         
-        function name = GetName(~, object)
+        function name = GetName(eXT, object)
             %% GETNAME returns the name of the object if possible
             % name = GETNAME(object)
             % This is mainly for convenience so we never forget to cast the
@@ -986,7 +987,9 @@ classdef EasyXT < handle
             %   o Threshold - The threshold value for determining the
             %   surfaces. If local contrast is 0, it is an absolute
             %   intensity threshold. Otherwise it is the threshold to apply
-            %   on the Local Contrast-filtered image.
+            %   on the Local Contrast-filtered image. Set to 'Auto' to use 
+            %   the Imaris built-in auto threshold method. Defaults to
+            %   'Auto';
             %   o Surface Filter - A string containing the filter you want
             %   to apply to your surfaces. Example: '"Quality" above 7.000'
             %   Defaults to '"Number of Voxels" above 10.0'
@@ -1008,7 +1011,7 @@ classdef EasyXT < handle
             
             
             %Defaults
-            th = 0;
+            th = 'Auto';
             gb = [];
             filter = '"Number of Voxels" above 10.0';
             name = '';
@@ -1031,8 +1034,9 @@ classdef EasyXT < handle
                         bgLocContrast = varargin{i+1};
                     case 'Threshold'
                         th = varargin{i+1};
-                        if th ~= 0;
-                            isAutoThr = false;
+                        if strcmp(th, 'Auto')
+                            isAutoThr = true;
+                            th = 0;
                         end
                     case 'Filter'
                         filter =  varargin{i+1};
@@ -1220,11 +1224,6 @@ classdef EasyXT < handle
                         isRegionGrow = true;
                     case 'Region Threshold'
                         regionThr= varargin{i+1};
-                        if ~strcmp(regionThr, 'Auto')
-                            isRegAutoThr = false;
-                        else
-                            regionThr =0;
-                        end
                         isRegionGrow = true;
                     case 'Diameter From Volume'
                         isDiamFromVol = varargin{i+1};
@@ -1236,6 +1235,11 @@ classdef EasyXT < handle
                 end
             end
             
+            if strcmp(regionThr, 'Auto')
+                isRegAutoThr = true;
+                regionThr = -1;
+            end
+                            
             % Set Defaults
             if isempty(vDataSet)
                 vDataSet = eXT.ImarisApp.GetDataSet;
@@ -1254,7 +1258,6 @@ classdef EasyXT < handle
             % Finally detect the spots...
             if(isRegionGrow)
                 if(useEllipse)
-                    celldisp({ channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false});
                     spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 else
                     spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, dxy, isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
@@ -1601,6 +1604,64 @@ classdef EasyXT < handle
             
         end
         
+        function newChannel = DistanceTransform(eXT, object, varargin)
+            %% DISTANCETRANSFORM applies a distance transform based on the current object
+            % DISTANCETRANSFORM(object, 'Type', 'Inside', ...
+            %                           'Name', 'Name for Distance Channel');
+            % Optional 'Key', Value pairs:
+            % o 'Type', string : 'Inside' or 'Outside' to define where the
+            % Distance transform takes place
+            %
+            % o 'Name', string: The name of the new channel with the
+            % distance transform
+
+            isInside = true;
+            type = 'Inside';
+            objName = eXT.GetName(object);
+            customName = '';
+                        
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Type'
+                        if strcmp(varargin{i+1}, 'Outside')
+                            isInside = false;
+                            type = varargin{i+1};
+                        end
+                        
+                    case 'Name'
+                        customName = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            objType = eXT.GetImarisType(object);
+            
+            switch objType
+                case 'Spots'
+                    [newChannel, dataSet] = eXT.MakeChannelFromSpots(object);
+                case 'Surfaces'
+                    [newChannel, dataSet] = eXT.MakeChannelFromSurfaces(object);
+                otherwise
+            end
+            
+            eXT.ImarisApp.GetImageProcessing.DistanceTransformChannel( ...
+            dataSet, newChannel-1, 1, isInside);
+        
+           if ~strcmp(customName, '')
+               name = customName;
+           else
+               name = sprintf('Distance Transform %s %s',objName , type);
+           end
+           
+           eXT.SetChannelName(newChannel, name);
+           
+           eXT.ImarisApp.SetDataSet(dataSet);
+
+   
+        end
+        
+        
         function [pathstr,name,ext] = GetCurrentFileName(eXT) 
             %% GetCurrentFileName returns the surrent file name path and extension
             % [pathstr,name,ext] = GetCurrentFileName() has no arguments and returns the same variables
@@ -1732,6 +1793,7 @@ classdef EasyXT < handle
             
             
         end
+        
         
         function [xy, z] = GetVoxelSize(eXT, varargin)
             %% GETVOXELSIZE returns the xy and z voxel size of the current dataset
