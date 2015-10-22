@@ -918,6 +918,7 @@ classdef EasyXT < handle
                     
                     try
                         vData = eval(expression{1});
+                        
                     catch er
                         fprintf(['Error while evaluating the expression.\n\n', ...
                             'Possible causes: invalid variable names (ch1, ch2, ...), ', ...
@@ -1214,7 +1215,7 @@ classdef EasyXT < handle
                         filter =  varargin{i+1};
                     case 'Region Growing'
                         isRegionGrow = varargin{i+1};
-                    case 'Region Local Contrast'
+                    case 'Region Growing Local Contrast'
                         isRegLocContrast = varargin{i+1};
                         isRegionGrow = true;
                     case 'Region Threshold'
@@ -1461,7 +1462,7 @@ classdef EasyXT < handle
         
         function V = GetVoxels(eXT, channel, varargin)
             %% GETVOXELS returns an array of voxels of the selected channel
-            % GETVOXELS(channel) returns a 3D or 4D array (if time) of the
+            % GETVOXELS(channel) returns a 1D, 3D or 4D array (if time) of the
             % selected channel.
             % 
             % Optional 'Key', Value pairs:
@@ -2170,7 +2171,11 @@ function C = getColocCoeffs(eXT, I1, I2, ch1, ch2, thr1, thr2, nT, mask, maskCh,
             C.MaskThreshold(z,1) = maskThr;
         end
         
+        if isZIndependent
+            C.Z(z,1) = z;
+        end
         
+        C.T(z,1) = nT;       
         
         C.nVoxels(z,1) = size(I1s,1);
         C.nVoxelsColoc(z,1) = size(idx,1);
@@ -2217,7 +2222,6 @@ function C = getColocCoeffs(eXT, I1, I2, ch1, ch2, thr1, thr2, nT, mask, maskCh,
         % Not Based on Intensities
         C.Mo1(z,1) = size (idx,1) ./ size(idx1,1);
         C.Mo2(z,1) = size (idx,1) ./ size(idx2,1);
-        C.T(z,1) = nT;
     end
     
 end
