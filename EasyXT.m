@@ -10,7 +10,7 @@ classdef EasyXT < handle
     % Olivier Burri & Romain Guiet, EPFL BioImaging & Optics Platform
     % March 2014
     % olivier dot burri at epfl.ch
-    % romain dot guiet at epfl.ch
+    % romain dot guiet at epfl.ch 
     % The necessary disclaimer:
     % We abide by the GNU General Public License (GPL) version 3:
     %     This program is free software: you can redistribute it and/or modify
@@ -62,10 +62,24 @@ classdef EasyXT < handle
             
             lib = getSavedImarisPath();
             if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
+<<<<<<< .mine
                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
                 setSavedImarisPath(eXT.imarisLibPath);
+
+
+=======
+                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
+                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
+
+                 eXT.imarisPath = PathName;
+                 setSavedImarisPath(eXT.imarisPath);
+>>>>>>> .theirs
             end
+            
+            eXT.imarisPath = getSavedImarisPath();
+            eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
+
             % Start Imaris Connection
             javaaddpath(eXT.imarisLibPath);
             
@@ -997,6 +1011,7 @@ classdef EasyXT < handle
                     
                     try
                         vData = eval(expression{1});
+                        
                     catch er
                         fprintf(['Error while evaluating the expression.\n\n', ...
                             'Possible causes: invalid variable names (ch1, ch2, ...), ', ...
@@ -1555,7 +1570,7 @@ classdef EasyXT < handle
         
         function V = GetVoxels(eXT, channel, varargin)
             %% GETVOXELS returns an array of voxels of the selected channel
-            % GETVOXELS(channel) returns a 3D or 4D array (if time) of the
+            % GETVOXELS(channel) returns a 1D, 3D or 4D array (if time) of the
             % selected channel.
             %
             % Optional 'Key', Value pairs:
@@ -1970,6 +1985,173 @@ classdef EasyXT < handle
         end
     end
     
+    %% Colocalization chunk
+    
+    methods
+        function [pearsons, manders, ica, fluorogram] = GetColoc(eXT, ch1, ch2, varargin)
+            vDataSet = eXT.ImarisApp.GetDataSet;
+            thr1 = 0;
+            thr2 = 0;
+            nT = eXT.GetSize('T');
+            T = 1:nT;
+            addChannel = false;
+            doHist = true;
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Thr1'
+                        thr1 = varargin{i+1};
+                    case 'Thr2'
+                        thr2 = varargin{i+1};
+                    case 'Show Histogram'
+                        doHist = varargin{i+1};
+                    case 'T'
+                        T = varargin{i+1};                    
+                    case 'Add Channel'
+                        addChannel = varargin{i+1};
+                        
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            % Channel Names
+            ch1Name = char(vDataSet.GetChannelName(ch1-1));
+            ch2Name = char(vDataSet.GetChannelName(ch2-1));
+            
+            if addChannel
+                vDataSet.SetSizeC(eXT.GetSize('C')+1);
+               
+                colocC = eXT.GetSize('C')-1;
+                dType = eXT.GetDataType();
+                cName = sprintf('Coloc Volume %s vs. %s, Thr1 %d, Thr2 %d', ch1Name, ch2Name, thr1, thr2);
+                vDataSet.SetChannelName (colocC, cName);
+
+
+            end
+            
+            for t=T
+                % Get the channels, slightly blur them first
+                ch1V = vDataSet.GetDataVolumeFloats(ch1-1, t-1);
+                ch2V = vDataSet.GetDataVolumeFloats(ch2-1, t-1);
+                
+                % Blurring
+                %ch1V = imfilter(ch1V, fspecial('gaussian', [5,5], 2.0));
+                %ch2V = imfilter(ch2V, fspecial('gaussian', [5,5], 2.0));
+                
+                ch1 = reshape(ch1V,[],1);
+                ch2 = reshape(ch2V,[],1);
+                % ch1 = vDataSet.GetDataVolumeAs1DArrayFloats (ch1-1, t-1);
+                % ch2 = vDataSet.GetDataVolumeAs1DArrayFloats (ch2-1, t-1);
+                
+                % Stats TODO =============================================
+                sum(ch1(ch1>thr1))
+                sum(ch2(ch2>thr2))
+                %sum(ch1(ch1>thr1) & ch2(ch2>thr2))
+                colocI = ch1>=thr1 & ch2>=thr2;
+                
+                meanCh1 = mean(ch1)
+                meanCh1Thr = mean(ch1(colocI))
+                
+                meanCh2 = mean(ch2)
+                meanCh2Thr = mean(ch2(colocI))
+                
+                r= sum( (ch1-meanCh1) .* (ch2-meanCh2) ) 
+                r2 = sqrt(sum( (ch1-meanCh1).^2)) .* sqrt(sum( (ch2-meanCh2).^2 ))
+                
+                
+                
+                rf = r/r2
+                r = corr(ch1, ch2)
+                
+   
+                r= sum( (ch1(colocI)-meanCh1Thr) .* (ch2(colocI)-meanCh2Thr) ) 
+                r2 = sqrt(sum( (ch1(colocI)-meanCh1Thr).^2)) .* sqrt(sum( (ch2(colocI)-meanCh2Thr).^2 ))
+                
+                rf = r/r2
+                
+                r1= corr(ch1(colocI), ch2(colocI))
+                % Stats TODO =============================================
+
+                                
+                % Display a histogram, if they want.
+                if doHist
+                    maxVal1 = max(ch1);
+                    maxVal2 = max(ch2);
+                    maxVal = max(maxVal2, maxVal1);
+                    
+                    % Blurring
+                    
+                    ch1V = smooth3(ch1V ./ maxVal .* 255, 'gaussian', 5, 1.0);
+                    ch2V = smooth3(ch2V ./ maxVal .* 255, 'gaussian', 5, 1.0);
+
+                    ch1 = reshape(ch1V,[],1);
+                    ch2 = reshape(ch2V,[],1);
+                    
+                    
+                    % Format input for hist3
+                    dat = ([ch1, ch2]);
+                    
+                    ctrs = {0:256+0.5 , 0:256+0.5};
+                    % This seems to cause a problem where 
+                    
+                    n = hist3(dat, ctrs);
+                    n1 = log10(n'+1);
+                    n1(size(n,1) + 1, size(n,2) + 1) = 0;
+                    xb = linspace(0,maxVal,size(n,1)+1);
+                    yb = linspace(0,maxVal,size(n,1)+1);
+                    h = pcolor(xb,yb,n1);
+
+                    cm = colormap(jet);
+                    cm(1,:) = [0,0,0];
+                    colormap(cm);
+                    set(h, 'EdgeColor', 'none');
+                    [cmin cmax] = caxis;
+                    caxis([0,cmax*0.75]);
+                    cb = colorbar;
+                    % Tick mark positions
+                    L = [0 1 10 100 1000 10000 100000, 1000000];
+                    l = log10(L+1); 
+                    set(cb,'YTick',l, 'YTicklabel',L);
+                    cb.Label.String = 'Pixel Counts';
+                    title(sprintf('Fluorogram %s vs. %s', ch1Name, ch2Name));
+                    xlabel(ch1Name);
+                    ylabel(ch2Name);
+                    
+                    % Show thresholds
+                    thr1Rect = thr1 / maxVal *255;
+                    thr2Rect = thr2 / maxVal *255;
+                    
+                    rectangle('Position',[thr1Rect thr2Rect maxVal-thr1Rect maxVal-thr2Rect], 'LineWidth',2, 'EdgeColor','y');
+
+                end
+                
+
+                if addChannel
+                    % Build the coloc channel
+                    colocVol = (ch1+ch2) ./ 2;
+                    colocVol(~colocI) = 0;
+                    
+                    switch dType
+                        case '8-bit'
+                            vDataSet.SetDataVolumeBytes(uint8(reshape(colocVol,size(ch1V))), colocC, t-1);
+                        case '16-bit'
+                            vDataSet.SetDataVolumeShorts(uint16(reshape(colocVol,size(ch1V))), colocC, t-1);             
+                        case '32-bit'
+                            vDataSet.SetDataVolumeFloats(float(reshape(colocVol,size(ch1V))), colocC, t-1);             
+                    end
+                end
+                
+                
+                
+            end
+            
+
+        end
+        
+    
+    end
+    
+    
     %% Statistics Related Methods
     methods
         function AddStatistic(~, object, name, values, varargin)
@@ -2209,12 +2391,25 @@ aType = aDataSet.GetType;
 end
 
 function libPath = getSavedImarisPath()
+<<<<<<< .mine
 confFile = fopen('config.txt','r');
 if confFile==-1
     libPath = '';
 else
     libPath = fscanf(confFile, 'ImarisPath: %s\n');
     fclose(confFile);
+
+
+=======
+    confFile = fopen('config.txt','r');
+    if confFile==-1 
+        libPath = '';
+    else
+        rawPath = fgetl(confFile);
+        libPath = rawPath(13:end);
+        fclose(confFile);
+    end
+>>>>>>> .theirs
 end
 end
 
@@ -2266,6 +2461,7 @@ for z = 1:sZ
         C.MaskThreshold(z,1) = maskThr;
     end
     
+<<<<<<< .mine
     
     
     C.nVoxels(z,1) = size(I1s,1);
@@ -2315,6 +2511,57 @@ for z = 1:sZ
     C.Mo2(z,1) = size (idx,1) ./ size(idx2,1);
     C.T(z,1) = nT;
 end
+=======
+    for z = 1:sZ
+        zStart = sX .* sY .* (z-1) + 1;
+        if sZ == 1
+            zEnd = numel(I1);
+        else
+            zEnd = sX .* sY .* z;
+        end
+        I1s = double(I1(zStart:zEnd));
+        I2s = double(I2(zStart:zEnd));
+        
+        if ~isempty(mask)
+            masks = double(mask(zStart:zEnd));
+            
+        else
+            masks = ones(zEnd - zStart + 1, 1);
+        end
+        
+        idx  = find(I1s>=thr1 & I2s>=thr2 & masks>0);
+        idx1 = find(I1s>=thr1 & masks>0);
+        idx2 = find(I2s>=thr2 & masks>0);
+        
+        C.Channel1(z,1) = ch1;
+        C.Channel2(z,1) = ch2;
+        C.Threshold1(z,1) = thr1;
+        C.Threshold2(z,1) = thr2;
+        if ~isempty(maskCh)
+            C.MaskChannel(z,1) = maskCh;
+            C.MaskThreshold(z,1) = maskThr;
+        end
+        
+        if isZIndependent
+            C.Z(z,1) = z;
+        end
+        
+        C.T(z,1) = nT;       
+        
+        C.nVoxels(z,1) = size(I1s,1);
+        C.nVoxelsColoc(z,1) = size(idx,1);
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> .theirs
 
 end
 
@@ -2335,6 +2582,7 @@ N = hist3(X,centers);
 
 
 
+<<<<<<< .mine
 if isShow
     figure, imagesc(log(N')+1);
     axis image;
@@ -2344,6 +2592,31 @@ if isShow
     xlabel(sprintf('Channel %d',ch1));
     xlabel(sprintf('Channel %d',ch2));
     title(sprintf('Fluorogram Ch %d vs. Ch %d', ch1, ch2));
+
+
+
+
+
+
+
+=======
+        EI1t = mean(I1s(idx));
+        EI2t = mean(I2s(idx));
+
+        nPxInt = sum( ( (I1s - EI1).*(I2s - EI2) ) > 0 );
+        nPxTot = sum( ( (I1s - EI1).*(I2s - EI2) ) ~= 0 );
+
+        nPxIntt = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) > 0 );
+        nPxTott = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) ~= 0 );
+
+        C.ICQ(z,1)  = nPxInt ./ nPxTot - 0.5;
+        C.ICQt(z,1) = nPxIntt ./ nPxTott - 0.5;
+
+        % Not Based on Intensities
+        C.Mo1(z,1) = size (idx,1) ./ size(idx1,1);
+        C.Mo2(z,1) = size (idx,1) ./ size(idx2,1);
+    end
+>>>>>>> .theirs
     
     cmap = colormap(jet);
     cmap(1,:) = [0 0 0];
