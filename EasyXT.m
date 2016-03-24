@@ -774,7 +774,7 @@ classdef EasyXT < handle
                      newDataSet2, newChannel-1, 1, false);
     
                 distout = eXT.GetVoxels(newChannel, 'Dataset', newDataSet2);
-                distin = distin - distout;
+                distin = distout - distin;
                 
                 nT = eXT.GetSize('T');
                 for t=0:nT-1
