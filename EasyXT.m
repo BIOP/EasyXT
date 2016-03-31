@@ -729,7 +729,7 @@ classdef EasyXT < handle
             newChannel = newChannel + 1;
         end
         
-        function DistanceTransform(eXT, object, varargin)
+        function newChannel = DistanceTransform(eXT, object, varargin)
             %% DISTANCETRANSFORM creates a new channel with the EDT
             type = eXT.GetImarisType(object);
             if ~(strcmp(type, 'Spots') || strcmp(type, 'Surfaces'))
@@ -795,6 +795,7 @@ classdef EasyXT < handle
                 
                 newDataSet.SetChannelName(newChannel-1, [direction ' Distance Transform of ' name]);
                 eXT.ImarisApp.SetDataSet(newDataSet);
+                
 
             end
             
