@@ -1357,10 +1357,10 @@ classdef EasyXT < handle
                         isSubtractBG =  varargin{i+1};
                     case 'Spots Filter'
                         filter =  varargin{i+1};
-                    case 'Region Local Contrast'
+                    case 'Region Growing Local Contrast'
                         isRegLocContrast = varargin{i+1};
                         isRegionGrow = true;
-                    case 'Region Threshold'
+                    case 'Region Growing Threshold'
                         regionThr= varargin{i+1};
                         if ~strcmp(regionThr, 'Auto')
                             isRegAutoThr = false;
@@ -1378,9 +1378,6 @@ classdef EasyXT < handle
                         
                     case 'Detect Ellipse'
                         useEllipse = varargin{i+1};
-                        
-                        
-                        
                     otherwise
                         error(['Unrecognized Command:' varargin{i}]);
                 end
@@ -1404,7 +1401,6 @@ classdef EasyXT < handle
             % Finally detect the spots...
             if(isRegionGrow)
                 if(useEllipse)
-                    celldisp({ channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false});
                     spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 else
                     spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, dxy, isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
