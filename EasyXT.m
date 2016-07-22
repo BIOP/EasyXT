@@ -35,7 +35,7 @@ classdef EasyXT < handle
         imarisPath = 'C:\Program Files\Bitplane\Imaris x64 7.6.5\';
         
         % We can define here the path where ImarisLib.jar is
-        imarisLibPath = ['C:\Program Files\Bitplane\Imaris x64 7.6.5\' 'XT\matlab\ImarisLib.jar'];
+        imarisLibPath = '';
         
         
     end
@@ -60,11 +60,14 @@ classdef EasyXT < handle
             % Supress Java Duplicate Class warnings
             warning('off','MATLAB:Java:DuplicateClass');
             
-            lib = getSavedImarisPath();
-            if nargin == 1 && (strcmp(varargin{1}, 'setup') || strcmp(lib, ''))
+             eXT.imarisPath = getSavedImarisPath();
+             eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
+             
+            if (nargin == 1 && strcmp(varargin{1}, 'setup')) || strcmp(eXT.imarisPath, '')
                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
+                eXT.imarisPath    = PathName; 
                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
-                setSavedImarisPath(eXT.imarisLibPath);
+                setSavedImarisPath(eXT.imarisPath);
             end
             % Start Imaris Connection
             javaaddpath(eXT.imarisLibPath);
@@ -1392,7 +1395,7 @@ classdef EasyXT < handle
             end
             
             if isempty(dxy)
-                [voxelXY, voxelZ] = eXT.getVoxelSize();
+                [voxelXY, voxelZ] = eXT.GetVoxelSize();
                 dxy = voxelXY*2;
                 if isempty(dz)
                     dz = voxelZ*2;
@@ -2270,7 +2273,7 @@ confFile = fopen('config.txt','r');
 if confFile==-1
     libPath = '';
 else
-    libPath = fscanf(confFile, 'ImarisPath: %s\n');
+    libPath = fscanf(confFile, 'ImarisPath: %2000c\n');
     fclose(confFile);
 end
 end
