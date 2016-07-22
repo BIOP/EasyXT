@@ -61,6 +61,7 @@ classdef EasyXT < handle
             warning('off','MATLAB:Java:DuplicateClass');
             
              eXT.imarisPath = getSavedImarisPath();
+             eXT.imarisPath = eXT.imarisPath(1:(end-1));
              eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
              
             if (nargin == 1 && strcmp(varargin{1}, 'setup')) || strcmp(eXT.imarisPath, '')
@@ -2269,7 +2270,7 @@ confFile = fopen('config.txt','r');
 if confFile==-1
     libPath = '';
 else
-    libPath = fscanf(confFile, 'ImarisPath: %2000c\n');
+    libPath = fscanf(confFile, 'ImarisPath: %2000c\n\r');
     fclose(confFile);
 end
 end
