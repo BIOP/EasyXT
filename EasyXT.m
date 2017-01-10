@@ -860,6 +860,75 @@ classdef EasyXT < handle
         end
         
         
+        function newSurface = SurfaceOperations(eXT, surface1, surface2, operation, varargin)
+            dataset = eXT.ImarisApp.GetDataSet;
+            smooth = -1;
+            idxa = strfind(operation, 'a');
+            idxb = strfind(operation, 'b');
+            
+            newName = strrep(strrep(operation, 'a', eXT.GetName(surface1)), 'b', eXT.GetName(surface2));
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'DataSet'
+                        dataset = varargin{i+1};
+                    case 'Smoothing'
+                        smooth = varargin{i+1};
+                    case 'Name'
+                        newName = varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            %Get Image Data parameters
+            aExtendMaxX = dataset.GetExtendMaxX;
+            aExtendMaxY = dataset.GetExtendMaxY;
+            aExtendMaxZ = dataset.GetExtendMaxZ;
+            aExtendMinX = dataset.GetExtendMinX;
+            aExtendMinY = dataset.GetExtendMinY;
+            aExtendMinZ = dataset.GetExtendMinZ;
+            aSizeX = dataset.GetSizeX;
+            aSizeY = dataset.GetSizeY;
+            aSizeZ = dataset.GetSizeZ;
+            aSizeC = dataset.GetSizeC;
+            aSizeT = dataset.GetSizeT;
+            Xvoxelspacing= (aExtendMaxX-aExtendMinX)/aSizeX;
+            if smooth == -1
+                smooth=Xvoxelspacing*2;
+            end
+            
+            %add additional channel
+            dataset.SetSizeC(aSizeC + 1);
+            TotalNumberofChannels=aSizeC+1;
+            vLastChannel=TotalNumberofChannels-1;
+
+            for vTimeIndex= 0:aSizeT-1
+                vSurfaces1Mask = surface1.GetMask(aExtendMinX,aExtendMinY,aExtendMinZ,aExtendMaxX,aExtendMaxY,aExtendMaxZ,aSizeX, aSizeY,aSizeZ,vTimeIndex);
+                vSurfaces2Mask = surface2.GetMask(aExtendMinX,aExtendMinY,aExtendMinZ,aExtendMaxX,aExtendMaxY,aExtendMaxZ,aSizeX, aSizeY,aSizeZ,vTimeIndex);
+
+                a = typecast(vSurfaces1Mask.GetDataVolumeAs1DArrayBytes(0,vTimeIndex), 'uint8');
+                b = typecast(vSurfaces2Mask.GetDataVolumeAs1DArrayBytes(0,vTimeIndex), 'uint8');
+
+                result = eval(operation); 
+                
+                dataset.SetDataVolumeAs1DArrayBytes(result, vLastChannel, vTimeIndex);
+
+            end
+            
+                        %Run the Surface Creation Wizard on the new channel
+            ip = eXT.ImarisApp.GetImageProcessing;
+            newSurface = ip.DetectSurfaces(dataset, [], vLastChannel, smooth, 0, false, 0.5, '');
+            newSurface.SetName(sprintf(newName));
+            %newSurface.SetColorRGBA((rand(1, 1)) * 256 * 256 * 256 );
+
+            %Add new surface to Surpass Scene
+            eXT.AddToScene(newSurface);
+            dataset.SetSizeC(aSizeC);
+
+        end
+        
+        
         function [newChannel, vDataSet] = MakeChannelFromSpots(eXT, mySpots, varargin)
             %% MAKECHANNELFROMSPOTS builds a new channel from a spots mask.
             % [newChannel, vDataSet] = MAKECHANNELFROMSPOTS(spots, ...
