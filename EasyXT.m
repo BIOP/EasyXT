@@ -620,8 +620,10 @@ classdef EasyXT < handle
             % [newChannel vDataSet] = MAKECHANNELFROMSURFACES(surface, ...
             %                                      'Mask Channel', maskChannel, ...
             %                                      'IDs', surfIDs, ...
-            %                                      'Time Indexes', tInd);
-            %                                      'Add Channel', isAdd) ;
+            %                                      'Time Indexes', tInd, ...
+            %                                      'Inside', inVal, ...                                      ...
+            %                                      'Outside', outVal, ...
+            %                                      'Add Channel', isAdd);
             
             % Creates a new channel containing one of either:
             % A mask based on the surface used OR
@@ -640,6 +642,11 @@ classdef EasyXT < handle
             %   IDs are unique for each surface, this includes timepoints.
             %   Masking based on track IDs could be implemented at a later
             %   date if needed.
+            %   o Inside - The voxel value that you want the voxels inside
+            %   the surface to have. Defaults to 255 or the value of the
+            %   Mask Channel. 
+            %   o Outside - The voxel value that you want the voxels
+            %   outside the surface to have. Defaults to 0;
             %   o Add Channel - Defines whether the function adds the
             %   channel to the current or not. You can grab the updated
             %   dataset through the second output argument. [ true ]
@@ -660,6 +667,8 @@ classdef EasyXT < handle
             time = [];
             surfIDs = 'All';
             maskChannel = 'None';
+            inVal = 255;
+            outVal = 0;
             isAddChannel = true;
             vDataSet = [];
             for i=1:2:length(varargin)
@@ -670,6 +679,10 @@ classdef EasyXT < handle
                         time = varargin{i+1};
                     case 'Mask Channel'
                         maskChannel =  varargin{i+1};
+                    case 'Inside'
+                        inVal =  varargin{i+1};
+                    case 'Outside'
+                        outVal =  varargin{i+1};
                     case 'Add Channel'
                         isAddChannel =  varargin{i+1};
                     case 'DataSet'
@@ -737,7 +750,7 @@ classdef EasyXT < handle
                     end
                     
                     if strcmp(maskChannel, 'None')
-                        chanVol = aData + 255;
+                        chanVol = aData + inVal;
                     else
                         
                         switch dataType
@@ -753,13 +766,17 @@ classdef EasyXT < handle
                     % class(maskVol)
                     
                     % Write to the dataset.
+                    
+                    % Set the outside value
+                    outVol = maskVol;
+                    outVol(maskVol==0) = outVal;
                     switch dataType
                         case '8-bit'
-                            vDataSet.SetDataVolumeBytes(chanVol .* maskVol, newChannel, time(ind)-1);
+                            vDataSet.SetDataVolumeBytes(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
                         case '16-bit'
-                            vDataSet.SetDataVolumeShorts(chanVol .* maskVol, newChannel, time(ind)-1);
+                            vDataSet.SetDataVolumeShorts(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
                         case '32-bit'
-                            vDataSet.SetDataVolumeFloats(chanVol .* maskVol, newChannel, time(ind)-1);
+                            vDataSet.SetDataVolumeFloats(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
                     end
                 end
                 
