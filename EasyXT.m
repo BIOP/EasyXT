@@ -528,7 +528,8 @@ classdef EasyXT < handle
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
             
             if isOnlyCurrent
-                spots.Set(PosXYZ,  t, spotSizes);
+                spots.Set(PosXYZ,  t, spotSizes(:,1));
+                spots.SetRadiiXYZ(spotSizes);
             else
                 nT = eXT.GetSize('T');
                 spots.Set(repmat(PosXYZ,nT,1), repmat(t,nT,1), repmat(spotSizes, nT,1));
@@ -2429,12 +2430,17 @@ for z = 1:sZ
     
     nPxInt = sum( ( (I1s - EI1).*(I2s - EI2) ) > 0 );
     nPxTot = sum( ( (I1s - EI1).*(I2s - EI2) ) ~= 0 );
+    %nPxTot = size(I1s,1);
+
     
     nPxIntt = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) > 0 );
     nPxTott = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) ~= 0 );
+    %nPxTott = size(idx,1);
     
-    C.ICQ(z,1)  = nPxInt ./ nPxTot - 0.5;
-    C.ICQt(z,1) = nPxIntt ./ nPxTott - 0.5;
+
+    
+    C.ICQ(z,1)  = (nPxInt ./ nPxTot) - 0.5;
+    C.ICQt(z,1) = (nPxIntt ./ nPxTott) - 0.5;
     
     % Not Based on Intensities
     C.Mo1(z,1) = size (idx,1) ./ size(idx1,1);
