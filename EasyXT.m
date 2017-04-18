@@ -923,8 +923,6 @@ classdef EasyXT < handle
             newSurface.SetName(sprintf(newName));
             %newSurface.SetColorRGBA((rand(1, 1)) * 256 * 256 * 256 );
 
-            %Add new surface to Surpass Scene
-            eXT.AddToScene(newSurface);
             dataset.SetSizeC(aSizeC);
 
         end
