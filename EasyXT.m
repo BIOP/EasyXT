@@ -2304,6 +2304,32 @@ classdef EasyXT < handle
             end
         end
         
+        %% Camera Display Helpers
+
+        function storeSceneProperties(eXT)
+            camera = eXT.ImarisApp.GetSurpassCamera;
+            cam.focus = camera.GetFocus;
+            cam.height = camera.GetHeight;
+            cam.ori = camera.GetOrientationQuaternion;
+            cam.orth = camera.GetOrthographic;
+            cam.persp = camera.GetPerspective;
+            cam.pos = camera.GetPosition;
+            
+           
+            save('camera.mat','cam');
+        end
+
+        function applySceneProperties(eXT)
+            load('camera.mat','-mat','cam');
+            camera = eXT.ImarisApp.GetSurpassCamera;
+            camera.SetFocus(cam.focus);
+            camera.SetHeight(cam.height);
+            camera.SetOrientationQuaternion(cam.ori);
+            camera.SetOrthographic(cam.orth);
+            camera.SetPerspective(cam.persp);
+            camera.SetPosition(cam.pos);
+        end
+
     end
 end
 
@@ -2369,6 +2395,8 @@ confFile = fopen('config.txt','w');
 fprintf (confFile, 'ImarisPath: %s\n', imPath);
 fclose(confFile);
 end
+
+
 
 %% Coloc Helpers
 function C = getColocCoeffs(eXT, I1, I2, ch1, ch2, thr1, thr2, nT, mask, maskCh, maskThr, isZIndependent )
