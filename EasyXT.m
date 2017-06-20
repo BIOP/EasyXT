@@ -1485,19 +1485,23 @@ classdef EasyXT < handle
                 end
             end
             
+            if size(dxy == 1)
+                dxy = [dxy dxy];
+            end
+            
             
             
             % Finally detect the spots...
             if(isRegionGrow)
                 if(useEllipse)
-                    spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
+                    spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 else
                     spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, dxy, isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 end
                 
             else
                 if(useEllipse)
-                    spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpots(vDataSet , [], channel-1, [dxy dxy dz], isSubtractBG, filter);
+                    spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpots(vDataSet , [], channel-1, [dxy dz], isSubtractBG, filter);
                 else
                     spots = eXT.ImarisApp.GetImageProcessing().DetectSpots2(vDataSet, [], channel-1, dxy, isSubtractBG, filter);
                 end
