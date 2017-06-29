@@ -1517,6 +1517,96 @@ classdef EasyXT < handle
             SetColor(eXT,spots, color);
         end
         
+        function trackedSpots = TrackSpots(eXT, spots, method, varargin)
+            %%TRACKSPOTS Creates a new spots object with the computed
+            %%trajectories
+            % spot = TRACKSPOTS(spot, method, ...
+            %                             'Name', name, ...
+            %                             'Max Distance', maxDist, ...
+            %                             'Gap Size', gapSize, ...
+            %                             'Fill Gaps', isGapFill, ...
+            %                             'Filter', filter, ...
+            %                   )
+            %
+            % Runs the Spots Tracking Algorithms available in Imaris on the
+            % provided spots object. It then returns a new spots object
+            % that contains the spots plus the tracks.
+            % parameters:
+            %   o method - one of 'Autoregressive Motion'
+            %                     'Autoregressive Motion Expert'
+            %                     'Brownian Motion'
+            %                     'Connected Components'
+            %   o Name - The name of the new spots object. Defaults to
+            %   the name of the original spots prepended with 'Tracked - '
+            %
+            %   o Max Distance - The maximum distance a spot is allowed to
+            %   move between frames to be considered as belonging to the
+            %   same trajectory. in calibrated units defaults to 20 x the
+            %   xy pixel size
+            %
+            %   o Gap Size - How many frames can the tracker look ahead to
+            %   make a longer trajectory in case some spots were not
+            %   detected between frames. Defaults to 3
+            %
+            %   o Fill Gaps - Should trajectories with gaps add
+            %   interpolated spots to the dataset? UNUSED because it is not
+            %   settable in the Imaris Programming Interface
+            %
+            %   o Intensity Weight - Expert mode only, what is the weight
+            %   of intensities to help the autoregressive motion algorithm
+            %   to choose one spot over another when performing the
+            %   tracking. 
+            %
+            %   o Filter - Text String that constains filters for the spot
+            %   tracks or spot objects.
+            
+            % Prepare variables with defaults
+           
+            name = sprintf('Tracked - %s', GetName(eXT, spots));
+            maxDist = GetVoxelSize(eXT)*20;
+            gapSize = 3;
+            isFill = true;
+            
+            framerate = eXT.ImarisApp.GetDataSet.GetTimePointsDelta();
+            intensityWeight = 3;
+            filter = sprintf('"Track Duration" above %f s', framerate);
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Name'
+                        name = varargin{i+1};
+                    case 'Max Distance'
+                        maxDist = varargin{i+1};
+                    case 'Gap Size'
+                        gapSize = varargin{i+1};
+                    case 'Fill Gaps'
+                        isFill = varargin{i+1};
+                    case 'Intensity Weight'
+                        intensityWeight = varargin{i+1};
+                    case 'Filter'
+                        filter =  varargin{i+1};
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            ip = eXT.ImarisApp.GetImageProcessing();
+            
+            switch method
+                case 'Autoregressive Motion'
+                    trackedSpots = ip.TrackSpotsAutoregressiveMotion (spots, maxDist, gapSize, filter);
+                case 'Autoregressive Motion Expert'
+                    trackedSpots = ip.TrackSpotsAutoregressiveMotionExpert (spots, maxDist, gapSize, intensityWeight, filter);
+                case 'Brownian Motion'
+                    trackedSpots = ip.TrackSpotsBrownianMotion (spots, maxDist, gapSize, filter);
+                case 'Connected Components'
+                    trackedSpots = ip.TrackSpotsConnectedComponents (spots, filter);
+
+            end   
+            SetName(eXT, trackedSpots, name);
+            
+        end
+        
         function newPoints = CreateMeasurementPoints(eXT, XYZ, varargin)
             %% CREATEMEASUREMENTPOINTS Creates new Measurement Points with default parameters
             % newPoints = CREATEMEASUREMENTPOINTS(XYZ, 'Name', name, ...
