@@ -64,7 +64,7 @@ classdef EasyXT < handle
              eXT.imarisPath = eXT.imarisPath(1:(end-1));
              eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
              
-            if (nargin == 1 && strcmp(varargin{1}, 'setup')) || strcmp(eXT.imarisPath, '')
+            if (nargin == 1 && strcmp(varargin{1}, 'setup')) || strcmp(eXT.imarisPath, '') || (exist(eXT.imarisLibPath,'file') ~= 2)
                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
                 eXT.imarisPath    = PathName; 
                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
