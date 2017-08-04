@@ -750,7 +750,7 @@ classdef EasyXT < handle
                     end
                     
                     if strcmp(maskChannel, 'None')
-                        chanVol = aData + inVal;
+                        chanVol = aData + inVal - 1;
                     else
                         
                         switch dataType
@@ -1496,14 +1496,14 @@ classdef EasyXT < handle
                 if(useEllipse)
                     spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dz], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 else
-                    spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, dxy, isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
+                    spots = eXT.ImarisApp.GetImageProcessing().DetectSpotsRegionGrowing(vDataSet, [], channel-1, [dxy dxy], isSubtractBG, filter, isRegLocContrast, isRegAutoThr, regionThr, isDiamFromVol, false);
                 end
                 
             else
                 if(useEllipse)
                     spots = eXT.ImarisApp.GetImageProcessing().DetectEllipticSpots(vDataSet , [], channel-1, [dxy dz], isSubtractBG, filter);
                 else
-                    spots = eXT.ImarisApp.GetImageProcessing().DetectSpots2(vDataSet, [], channel-1, dxy, isSubtractBG, filter);
+                    spots = eXT.ImarisApp.GetImageProcessing().DetectSpots2(vDataSet, [], channel-1, dxy(1), isSubtractBG, filter);
                 end
             end
             
@@ -2396,7 +2396,7 @@ classdef EasyXT < handle
         
         %% Camera Display Helpers
 
-        function storeSceneProperties(eXT)
+        function cam = storeSceneProperties(eXT)
             camera = eXT.ImarisApp.GetSurpassCamera;
             cam.focus = camera.GetFocus;
             cam.height = camera.GetHeight;
@@ -2409,7 +2409,7 @@ classdef EasyXT < handle
             save('camera.mat','cam');
         end
 
-        function applySceneProperties(eXT)
+        function applySceneProperties(eXT, cam)
             load('camera.mat','-mat','cam');
             camera = eXT.ImarisApp.GetSurpassCamera;
             camera.SetFocus(cam.focus);
