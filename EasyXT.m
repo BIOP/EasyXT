@@ -208,7 +208,7 @@ classdef EasyXT < handle
                 for i = 1 : nChildren
                     object = parent.GetChild(i-1);
                     objName = char(object.GetName);
-                    
+                   
                     objType = GetImarisType(eXT, object);
                     
                     if ~isempty(name) % If we're using the name
@@ -292,7 +292,8 @@ classdef EasyXT < handle
             nChildren = parent.GetNumberOfChildren;
             for i = 1 : nChildren
                 object = parent.GetChild(i-1);
-                objName = char(object.GetName);
+                
+                objName = char(object.GetName());
                 
                 objType = GetImarisType(eXT, object);
                 
@@ -517,13 +518,17 @@ classdef EasyXT < handle
                 spotSizes = repmat(spotSizes, size(PosXYZ,1),1);
             end
             
+            if  size(spotSizes,2) == 1
+                spotSizes = repmat(spotSizes, 1,3);
+            end
+            
+            
             if ~( size(spotSizes,2) == 3 || size(spotSizes,2) == 1 )&& ( size(spotSizes,1) == size(PosXYZ,1) )
                 error('Radii must be either an nx1 array or an nx3 array');
             end
             if size(PosXYZ,2) ~= 3
                 error('XYZ must be nx3 in size.');
             end
-            
             % Create the spots
             spots = eXT.ImarisApp.GetFactory().CreateSpots();
             
