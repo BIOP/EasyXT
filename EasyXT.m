@@ -207,7 +207,7 @@ classdef EasyXT < handle
                 nChildren = parent.GetNumberOfChildren;
                 for i = 1 : nChildren
                     object = parent.GetChild(i-1);
-                    objName = char(object.GetName);
+                    objName = eXT.GetName(object);
                    
                     objType = GetImarisType(eXT, object);
                     
@@ -293,7 +293,7 @@ classdef EasyXT < handle
             for i = 1 : nChildren
                 object = parent.GetChild(i-1);
                 
-                objName = char(object.GetName());
+                objName = eXT.GetName(object);
                 
                 objType = GetImarisType(eXT, object);
                 
@@ -327,7 +327,7 @@ classdef EasyXT < handle
                 name = char(object.GetName);
             else
                 name = [];
-                disp('This object has no "GetName" method.')
+                %disp(['Object of class ' class(object) ' has no "GetName" method.']);
             end
             
         end
@@ -515,7 +515,7 @@ classdef EasyXT < handle
             end
             
             if (all(size(spotSizes) == [1 1]))
-                spotSizes = repmat(spotSizes, size(PosXYZ,1),1);
+                spotSizes = repmat(spotSizes, size(PosXYZ,1),3);
             end
             
             if  size(spotSizes,2) == 1
