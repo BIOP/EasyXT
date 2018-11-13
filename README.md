@@ -7,4 +7,4 @@ A Matlab Xtension for Imaris.
 
 This XTension can help simplify the interaction between Matlab and Imaris when writing XTensions. More documentation to come.
 
-More info at http://ptbiop.github.io/EasyXT
+More info at http://biop.github.io/EasyXT
