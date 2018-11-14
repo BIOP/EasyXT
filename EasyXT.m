@@ -579,6 +579,31 @@ classdef EasyXT < handle
             
         end
         
+         function ResetScene(eXT)
+            %% ResetScene Creates a new Surpass scene
+            % RESETSCENE() is useful for clearning the current scene.
+            
+            scene = eXT.ImarisApp.GetSurpassScene;
+            
+            nChildren = scene.GetNumberOfChildren;
+            
+%             objectsToRemove = [];
+            
+           
+            for i = nChildren:-1:1
+                object = scene.GetChild(i-1);
+                objectType = GetImarisType(eXT, object);
+                
+                if (~(  strcmp ( objectType , 'Light Source' )  ||  ...
+                        strcmp ( objectType , 'Frame' )         ||  ...
+                        strcmp ( objectType , 'Volume')                 ))
+                   scene.RemoveChild(object) ;
+                   
+                end
+            
+            end
+            
+        end
         
         
         function AddToScene(eXT, object, varargin)
@@ -814,6 +839,21 @@ classdef EasyXT < handle
         
         function newChannel = DistanceTransform(eXT, object, varargin)
             %% DISTANCETRANSFORM creates a new channel with the EDT
+            %  newChannel = DISTANCETRANSFORM(object, ...
+            %                                 'Direction', direction)                        
+            % Optional Parameter/Value pairs
+            %   o Direction - defines the direction of the 
+            %     'Inside' : distance from object directed towards the 
+            %       inside of the object core. Pixels, outside are set to
+            %       0. Pixel values grows as we get deeper in the object.
+            %                
+            %     'Outside' : distance from object directed towards the
+            %     outside of the object. Pixels inside are set to 0.
+            %     Pixel values grows as we get far awy from the object.
+            %                       
+            %     'Both' : Pixels at the Edge are set to 0. Pixels outside 
+            %     and inside are respectively negative and positive.                                  
+
             type = eXT.GetImarisType(object);
             if ~(strcmp(type, 'Spots') || strcmp(type, 'Surfaces'))
                 return
@@ -878,6 +918,8 @@ classdef EasyXT < handle
             
             newDataSet.SetChannelName(newChannel-1, [direction ' Distance Transform of ' name]);
             eXT.ImarisApp.SetDataSet(newDataSet);
+            
+            
             
             
         end
@@ -1147,7 +1189,7 @@ classdef EasyXT < handle
                     end
                     
                     try
-                        vData = eval(expression{1});
+                        vData = eval(expression);
                     catch er
                         fprintf(['Error while evaluating the expression.\n\n', ...
                             'Possible causes: invalid variable names (ch1, ch2, ...), ', ...
@@ -1177,7 +1219,7 @@ classdef EasyXT < handle
             %(Starting at 0)
             newChannel = vLastC+1;
             
-            vDataSet.SetChannelName(vLastC, expression{1});
+            vDataSet.SetChannelName(vLastC, expression);
             if isAddChannel
                 eXT.ImarisApp.SetDataSet(vDataSet);
             end
@@ -1293,7 +1335,7 @@ classdef EasyXT < handle
             end
             
             if isempty(gb)
-                [voxelXY, ~] = eXT.getVoxelSize();
+                [voxelXY, ~] = eXT.GetVoxelSize();
                 gb = voxelXY*2;
             end
             
@@ -1362,12 +1404,12 @@ classdef EasyXT < handle
             %                             'Diameter XY', dXY, ...
             %                             'Diameter Z', dZ, ...
             %                             'Subtract BG', isSubtractBG, ...
-            %                             'Local Contrast', isLocContrast, ...
+            %                             'Region Growing Local Contrast', isLocContrast, ...
             %                             'Spots Filter', filterString, ...
             %                             'Seed Diameter', seedD, ...
             %                             'Seed Local Contrast', isSeedLocC, ...
             %                             'Seed Filter', seedFilterString, ...
-            %                             'DataSet', aDataSet
+            %                             'DataSet', aDataSet,...
             %                   )
             %
             % Detects a spots from channel channel with optional
