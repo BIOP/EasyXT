@@ -194,7 +194,7 @@ classdef EasyXT < handle
             end
             % here are the Existing Types
             types = {'All', 'Spots', 'Surfaces', 'Points' , 'Groups'};
-            if any( contains(types, type) )
+            if ~any( contains(types, type) )
                 e = strcat ('Unrecognized Object Type (should be either: All, Spots, Surfaces, Points , Groups)' );
                 error( e );
             end
