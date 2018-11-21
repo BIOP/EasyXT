@@ -142,7 +142,7 @@ classdef EasyXT < handle
             %       Defaults to [ 1 ]
             %
             %   o Type - Defines the type of object Choices are:
-            %     'All', Spots', Surfaces', 'Points' and 'Groups'
+            %     'All', 'Spots', 'Surfaces', 'Points' and 'Groups'
             %       Defaults to [ 'All' ]
             %
             %   o Cast - Determines what kind of object you want in return.
@@ -191,6 +191,12 @@ classdef EasyXT < handle
                     otherwise
                         error(['Unrecognized Command:' varargin{i}]);
                 end
+            end
+            % here are the Existing Types
+            types = {'All', 'Spots', 'Surfaces', 'Points' , 'Groups'};
+            if any( contains(types, type) )
+                e = strcat ('Unrecognized Object Type (should be either: All, Spots, Surfaces, Points , Groups)' );
+                error( e );
             end
             
             object = []; %#ok<*NASGU>
