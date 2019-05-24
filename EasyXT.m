@@ -775,47 +775,49 @@ classdef EasyXT < handle
                 
                 % And now create the new volumes for each timepoint or for
                 % each subsurface
-                for ind=1:size(surfaceMask,1)
-                    switch dataType
-                        case '8-bit'
-                            maskVol = surfaceMask(ind).GetDataVolumeBytes(0,0);
-                        case '16-bit'
-                            maskVol = surfaceMask(ind).GetDataVolumeShorts(0,0);
-                        case '32-bit'
-                            maskVol = surfaceMask(ind).GetDataVolumeFloats(0,0);
-                    end
-                    
-                    if strcmp(maskChannel, 'None')
-                        chanVol = aData + inVal - 1;
-                    else
-                        
+                for z=1:eXT.GetSize('Z')
+                    progress(z-1,eXT.GetSize('Z'));
+                    for ind=1:size(surfaceMask,1)
                         switch dataType
                             case '8-bit'
-                                chanVol = vDataSet.GetDataVolumeBytes(maskChannel-1,time(ind)-1);
+                                maskSlice = surfaceMask(ind).GetDataSliceBytes(z-1, 0,0);
                             case '16-bit'
-                                chanVol = vDataSet.GetDataVolumeShorts(maskChannel-1,time(ind)-1);
+                                maskSlice = surfaceMask(ind).GetDataSliceShorts(z-1, 0,0);
                             case '32-bit'
-                                chanVol = vDataSet.GetDataVolumeFloats(maskChannel-1,time(ind)-1);
+                                maskSlice = surfaceMask(ind).GetDataSliceFloats(z-1, 0,0);
+                        end
+
+                        if strcmp(maskChannel, 'None')
+                            chanSlice = aData(:,:,z) + inVal - 1;
+                        else
+
+                            switch dataType
+                                case '8-bit'
+                                    chanSlice = vDataSet.GetDataSliceBytes(z-1, maskChannel-1,time(ind)-1);
+                                case '16-bit'
+                                    chanSlice = vDataSet.GetDataSliceShorts(z-1, maskChannel-1,time(ind)-1);
+                                case '32-bit'
+                                    chanSlice = vDataSet.GetDataSliceFloats(z-1, maskChannel-1,time(ind)-1);
+                            end
+                        end
+                        % class(chanVol)
+                        % class(maskVol)
+
+                        % Write to the dataset.
+
+                        % Set the outside value
+                        outSlice = maskSlice;
+                        outSlice(maskSlice==0) = outVal;
+                        switch dataType
+                            case '8-bit'
+                                vDataSet.SetDataSliceBytes(chanSlice .* maskSlice + outSlice, z-1, newChannel, time(ind)-1);
+                            case '16-bit'
+                                vDataSet.SetDataSliceShorts(chanSlice .* maskSlice + outSlice, z-1, newChannel, time(ind)-1);
+                            case '32-bit'
+                                vDataSet.SetDataSliceFloats(chanSlice .* maskSlice + outSlice, z-1, newChannel, time(ind)-1);
                         end
                     end
-                    % class(chanVol)
-                    % class(maskVol)
-                    
-                    % Write to the dataset.
-                    
-                    % Set the outside value
-                    outVol = maskVol;
-                    outVol(maskVol==0) = outVal;
-                    switch dataType
-                        case '8-bit'
-                            vDataSet.SetDataVolumeBytes(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
-                        case '16-bit'
-                            vDataSet.SetDataVolumeShorts(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
-                        case '32-bit'
-                            vDataSet.SetDataVolumeFloats(chanVol .* maskVol + outVol, newChannel, time(ind)-1);
-                    end
                 end
-                
                 % Name the channel
                 if ~strcmp(maskChannel, 'None')
                     vDataSet.SetChannelName(newChannel, ['Masked Channel: ' char(vDataSet.GetChannelName(maskChannel-1)) ' using "' char(surface.GetName) ' "']);
@@ -924,10 +926,7 @@ classdef EasyXT < handle
             
             newDataSet.SetChannelName(newChannel-1, [direction ' Distance Transform of ' name]);
             eXT.ImarisApp.SetDataSet(newDataSet);
-            
-            
-            
-            
+
         end
         
         
@@ -2701,3 +2700,17 @@ dataVolume1D(~tf) = 0;
 
 end
 
+function progress(current, total) 
+    % Break into 50 elements
+    n=50;
+    currently = round( current ./ total .* n ); 
+    str = pad('',currently,'left','=');
+    str = pad(str, n,'right');
+    if( current > 0 ) 
+        for k=1:(n+4)
+            fprintf('\b'); 
+        end
+    end
+    fprintf('\n[%s]\n', str);
+
+end
