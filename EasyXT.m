@@ -1941,7 +1941,7 @@ classdef EasyXT < handle
                 k=k+1;
                 
             end
-            folderRef.SetName(newName);
+            eXT.SetName( folderRef, newName);
         end
         
         function RunXtension(eXT, name)
@@ -2278,7 +2278,7 @@ classdef EasyXT < handle
             vAllStatistics = object.GetStatistics;
             ids= vAllStatistics.mIds;
             nEl = numel(unique(ids(ids>=0)));
-            unique(ids(ids>=0))
+            unique(ids(ids>=0));
             
             newStatFactorNames = {'Category'};
             newStatFactors(1:nEl) = {'Custom'};
