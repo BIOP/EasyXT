@@ -60,13 +60,13 @@ classdef EasyXT < handle
             % Supress Java Duplicate Class warnings
             warning('off','MATLAB:Java:DuplicateClass');
             
-             eXT.imarisPath = getSavedImarisPath();
-             eXT.imarisPath = eXT.imarisPath(1:(end-1));
-             eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
-             
+            eXT.imarisPath = getSavedImarisPath();
+            eXT.imarisPath = eXT.imarisPath(1:(end-1));
+            eXT.imarisLibPath = [eXT.imarisPath, 'XT\matlab\ImarisLib.jar'];
+            
             if (nargin == 1 && strcmp(varargin{1}, 'setup')) || strcmp(eXT.imarisPath, '') || (exist(eXT.imarisLibPath,'file') ~= 2)
                 [~,PathName] = uigetfile('.exe','Location of Imaris executable');
-                eXT.imarisPath    = PathName; 
+                eXT.imarisPath    = PathName;
                 eXT.imarisLibPath = [PathName, 'XT\matlab\ImarisLib.jar'];
                 setSavedImarisPath(eXT.imarisPath);
             end
@@ -214,7 +214,7 @@ classdef EasyXT < handle
                 for i = 1 : nChildren
                     object = parent.GetChild(i-1);
                     objName = eXT.GetName(object);
-                   
+                    
                     objType = GetImarisType(eXT, object);
                     
                     if ~isempty(name) % If we're using the name
@@ -585,7 +585,7 @@ classdef EasyXT < handle
             
         end
         
-         function ResetScene(eXT)
+        function ResetScene(eXT)
             %% ResetScene Creates a new Surpass scene
             % RESETSCENE() is useful for clearning the current scene.
             
@@ -593,9 +593,9 @@ classdef EasyXT < handle
             
             nChildren = scene.GetNumberOfChildren;
             
-%             objectsToRemove = [];
+            %             objectsToRemove = [];
             
-           
+            
             for i = nChildren:-1:1
                 object = scene.GetChild(i-1);
                 objectType = GetImarisType(eXT, object);
@@ -603,10 +603,10 @@ classdef EasyXT < handle
                 if (~(  strcmp ( objectType , 'Light Source' )  ||  ...
                         strcmp ( objectType , 'Frame' )         ||  ...
                         strcmp ( objectType , 'Volume')                 ))
-                   scene.RemoveChild(object) ;
-                   
+                    scene.RemoveChild(object) ;
+                    
                 end
-            
+                
             end
             
         end
@@ -651,6 +651,98 @@ classdef EasyXT < handle
             parent.RemoveChild(object);
         end
         
+        function [newChannel, vDataset] = MaskChannelWithSurface( eXT, channel, surface, varargin )
+            outside = 0;
+            inside = 'same';
+            
+            for i=1:2:length(varargin)
+                switch varargin{i}
+                    case 'Outside'
+                        outside = varargin{i+1};    
+                    case 'Inside'
+                        inside = varargin{i+1};
+                        
+                    otherwise
+                        error(['Unrecognized Command:' varargin{i}]);
+                end
+            end
+            
+            
+            vDataSet = eXT.ImarisApp.GetDataSet.Clone;
+            % Get some info from the scene
+            [aData, aSize, aMin, aMax, ~] = GetDataSetData(vDataSet);
+            
+            time = 1:eXT.GetSize('T');
+            slices = 1:eXT.GetSize('Z');
+            
+            % Iterate through all selected timepoints and slices
+            for ind=1:size(time,2)
+                surfaceMask(ind) = surface.GetMask( aMin(1), aMin(2),aMin(3), ...
+                    aMax(1), aMax(2), aMax(3), ...
+                    aSize(1), aSize(2), aSize(3), ...
+                    time(ind)-1);
+            end
+            
+            newChannel = eXT.GetSize('C');
+            vDataSet.SetSizeC(newChannel+1);
+            dataType = eXT.GetDataType();
+                
+            for z=slices
+                progress(z-1,eXT.GetSize('Z'));
+                for ind=1:size(surfaceMask,1)
+                    switch dataType
+                        case '8-bit'
+                            maskSlice = surfaceMask(ind).GetDataSliceBytes(z-1, 0,0);
+                        case '16-bit'
+                            maskSlice = surfaceMask(ind).GetDataSliceShorts(z-1, 0,0);
+                        case '32-bit'
+                            maskSlice = surfaceMask(ind).GetDataSliceFloats(z-1, 0,0);
+                    end
+                    
+                    switch dataType
+                        case '8-bit'
+                            chanSlice = vDataSet.GetDataSliceBytes(z-1, channel-1,time(ind)-1);
+                        case '16-bit'
+                            chanSlice = vDataSet.GetDataSliceShorts(z-1, channel-1,time(ind)-1);
+                        case '32-bit'
+                            chanSlice = vDataSet.GetDataSliceFloats(z-1, channel-1,time(ind)-1);
+                    end
+                    
+                    newSlice = chanSlice;
+                    
+                    % Here we have the mask, now we take the channel we
+                    if ~strcmp( inside, 'same' )
+                        % Modify the inside to be the given value
+                        
+                        newSlice(maskSlice==1) = inside;
+                    end
+                    if ~strcmp( outside, 'same' )
+                        newSlice(maskSlice==0) = outside;
+                    end
+                    
+                    switch dataType
+                        case '8-bit'
+                            vDataSet.SetDataSliceBytes(newSlice, z-1, newChannel, time(ind)-1);
+                        case '16-bit'
+                            vDataSet.SetDataSliceShorts(newSlice, z-1, newChannel, time(ind)-1);
+                        case '32-bit'
+                            vDataSet.SetDataSliceFloats(newSlice, z-1, newChannel, time(ind)-1);
+                    end
+                    
+                end
+            end
+            
+            % Name the channel
+            vDataSet.SetChannelName(newChannel, ['Masked Channel: ' char(vDataSet.GetChannelName(channel-1)) ' using "' char(surface.GetName) ' "']);
+            % Give the channel the same color as the Surface object
+            vRGBA = vDataSet.GetChannelColorRGBA(channel-1);
+            vDataSet.SetChannelColorRGBA(newChannel, vRGBA);
+
+            eXT.ImarisApp.SetDataSet(vDataSet);
+            
+            newChannel = newChannel + 1;
+        end
+        
         function [newChannel, vDataSet] = MakeChannelFromSurfaces(eXT, surface, varargin)
             %% MAKECHANNELFROMSURFACES builds a new channel from a surface mask.
             % [newChannel vDataSet] = MAKECHANNELFROMSURFACES(surface, ...
@@ -680,7 +772,7 @@ classdef EasyXT < handle
             %   date if needed.
             %   o Inside - The voxel value that you want the voxels inside
             %   the surface to have. Defaults to 255 or the value of the
-            %   Mask Channel. 
+            %   Mask Channel.
             %   o Outside - The voxel value that you want the voxels
             %   outside the surface to have. Defaults to 0;
             %   o Add Channel - Defines whether the function adds the
@@ -755,6 +847,7 @@ classdef EasyXT < handle
                         time(ind) = surface.GetTimeIndex(surfIDs(ind))+1;
                     end
                     
+                    
                 else
                     % Iterate through all selected timepoints
                     for ind=1:size(time,2)
@@ -763,6 +856,15 @@ classdef EasyXT < handle
                             aMax(1), aMax(2), aMax(3), ...
                             aSize(1), aSize(2), aSize(3), ...
                             time(ind)-1);
+                        
+                        switch dataType
+                            case '8-bit'
+                                chanSlice = vDataSet.GetDataSliceBytes(z-1, maskChannel-1,time(ind)-1);
+                            case '16-bit'
+                                chanSlice = vDataSet.GetDataSliceShorts(z-1, maskChannel-1,time(ind)-1);
+                            case '32-bit'
+                                chanSlice = vDataSet.GetDataSliceFloats(z-1, maskChannel-1,time(ind)-1);
+                        end
                         
                         
                     end
@@ -786,11 +888,11 @@ classdef EasyXT < handle
                             case '32-bit'
                                 maskSlice = surfaceMask(ind).GetDataSliceFloats(z-1, 0,0);
                         end
-
+                        
                         if strcmp(maskChannel, 'None')
                             chanSlice = aData(:,:,z) + inVal - 1;
                         else
-
+                            
                             switch dataType
                                 case '8-bit'
                                     chanSlice = vDataSet.GetDataSliceBytes(z-1, maskChannel-1,time(ind)-1);
@@ -802,9 +904,9 @@ classdef EasyXT < handle
                         end
                         % class(chanVol)
                         % class(maskVol)
-
+                        
                         % Write to the dataset.
-
+                        
                         % Set the outside value
                         outSlice = maskSlice;
                         outSlice(maskSlice==0) = outVal;
@@ -848,20 +950,20 @@ classdef EasyXT < handle
         function newChannel = DistanceTransform(eXT, object, varargin)
             %% DISTANCETRANSFORM creates a new channel with the EDT
             %  newChannel = DISTANCETRANSFORM(object, ...
-            %                                 'Direction', direction)                        
+            %                                 'Direction', direction)
             % Optional Parameter/Value pairs
-            %   o Direction - defines the direction of the 
-            %     'Inside' : distance from object directed towards the 
+            %   o Direction - defines the direction of the
+            %     'Inside' : distance from object directed towards the
             %       inside of the object core. Pixels, outside are set to
             %       0. Pixel values grows as we get deeper in the object.
-            %                
+            %
             %     'Outside' : distance from object directed towards the
             %     outside of the object. Pixels inside are set to 0.
             %     Pixel values grows as we get far awy from the object.
-            %                       
-            %     'Both' : Pixels at the Edge are set to 0. Pixels outside 
-            %     and inside are respectively negative and positive.                                  
-
+            %
+            %     'Both' : Pixels at the Edge are set to 0. Pixels outside
+            %     and inside are respectively negative and positive.
+            
             type = eXT.GetImarisType(object);
             if ~(strcmp(type, 'Spots') || strcmp(type, 'Surfaces'))
                 return
@@ -926,7 +1028,7 @@ classdef EasyXT < handle
             
             newDataSet.SetChannelName(newChannel-1, [direction ' Distance Transform of ' name]);
             eXT.ImarisApp.SetDataSet(newDataSet);
-
+            
         end
         
         
@@ -972,28 +1074,28 @@ classdef EasyXT < handle
             dataset.SetSizeC(aSizeC + 1);
             TotalNumberofChannels=aSizeC+1;
             vLastChannel=TotalNumberofChannels-1;
-
+            
             for vTimeIndex= 0:aSizeT-1
                 vSurfaces1Mask = surface1.GetMask(aExtendMinX,aExtendMinY,aExtendMinZ,aExtendMaxX,aExtendMaxY,aExtendMaxZ,aSizeX, aSizeY,aSizeZ,vTimeIndex);
                 vSurfaces2Mask = surface2.GetMask(aExtendMinX,aExtendMinY,aExtendMinZ,aExtendMaxX,aExtendMaxY,aExtendMaxZ,aSizeX, aSizeY,aSizeZ,vTimeIndex);
-
+                
                 a = typecast(vSurfaces1Mask.GetDataVolumeAs1DArrayBytes(0,vTimeIndex), 'uint8');
                 b = typecast(vSurfaces2Mask.GetDataVolumeAs1DArrayBytes(0,vTimeIndex), 'uint8');
-
-                result = eval(operation); 
+                
+                result = eval(operation);
                 
                 dataset.SetDataVolumeAs1DArrayBytes(result, vLastChannel, vTimeIndex);
-
+                
             end
             
-                        %Run the Surface Creation Wizard on the new channel
+            %Run the Surface Creation Wizard on the new channel
             ip = eXT.ImarisApp.GetImageProcessing;
             newSurface = ip.DetectSurfaces(dataset, [], vLastChannel, smooth, 0, false, 0.5, '');
             newSurface.SetName(sprintf(newName));
             %newSurface.SetColorRGBA((rand(1, 1)) * 256 * 256 * 256 );
-
+            
             dataset.SetSizeC(aSizeC);
-
+            
         end
         
         
@@ -1608,13 +1710,13 @@ classdef EasyXT < handle
             %   o Intensity Weight - Expert mode only, what is the weight
             %   of intensities to help the autoregressive motion algorithm
             %   to choose one spot over another when performing the
-            %   tracking. 
+            %   tracking.
             %
             %   o Filter - Text String that constains filters for the spot
             %   tracks or spot objects.
             
             % Prepare variables with defaults
-           
+            
             name = sprintf('Tracked - %s', GetName(eXT, spots));
             maxDist = GetVoxelSize(eXT)*20;
             gapSize = 3;
@@ -1654,8 +1756,8 @@ classdef EasyXT < handle
                     trackedSpots = ip.TrackSpotsBrownianMotion (spots, maxDist, gapSize, filter);
                 case 'Connected Components'
                     trackedSpots = ip.TrackSpotsConnectedComponents (spots, filter);
-
-            end   
+                    
+            end
             SetName(eXT, trackedSpots, name);
             
         end
@@ -2448,7 +2550,7 @@ classdef EasyXT < handle
         end
         
         %% Camera Display Helpers
-
+        
         function cam = storeSceneProperties(eXT)
             camera = eXT.ImarisApp.GetSurpassCamera;
             cam.focus = camera.GetFocus;
@@ -2458,10 +2560,10 @@ classdef EasyXT < handle
             cam.persp = camera.GetPerspective;
             cam.pos = camera.GetPosition;
             
-           
+            
             save('camera.mat','cam');
         end
-
+        
         function applySceneProperties(eXT, cam)
             load('camera.mat','-mat','cam');
             camera = eXT.ImarisApp.GetSurpassCamera;
@@ -2472,7 +2574,7 @@ classdef EasyXT < handle
             camera.SetPerspective(cam.persp);
             camera.SetPosition(cam.pos);
         end
-
+        
     end
 end
 
@@ -2621,13 +2723,13 @@ for z = 1:sZ
     nPxInt = sum( ( (I1s - EI1).*(I2s - EI2) ) > 0 );
     nPxTot = sum( ( (I1s - EI1).*(I2s - EI2) ) ~= 0 );
     %nPxTot = size(I1s,1);
-
+    
     
     nPxIntt = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) > 0 );
     nPxTott = sum( ( (I1s(idx) - EI1t).*(I2s(idx) - EI2t) ) ~= 0 );
     %nPxTott = size(idx,1);
     
-
+    
     
     C.ICQ(z,1)  = (nPxInt ./ nPxTot) - 0.5;
     C.ICQt(z,1) = (nPxIntt ./ nPxTott) - 0.5;
@@ -2700,17 +2802,17 @@ dataVolume1D(~tf) = 0;
 
 end
 
-function progress(current, total) 
-    % Break into 50 elements
-    n=50;
-    currently = round( current ./ total .* n ); 
-    str = pad('',currently,'left','=');
-    str = pad(str, n,'right');
-    if( current > 0 ) 
-        for k=1:(n+4)
-            fprintf('\b'); 
-        end
+function progress(current, total)
+% Break into 50 elements
+n=50;
+currently = round( current ./ total .* n );
+str = pad('',currently,'left','=');
+str = pad(str, n,'right');
+if( current > 0 )
+    for k=1:(n+4)
+        fprintf('\b');
     end
-    fprintf('\n[%s]\n', str);
+end
+fprintf('\n[%s]\n', str);
 
 end
