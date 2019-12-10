@@ -558,8 +558,47 @@ classdef EasyXT < handle
             eXT.ImarisApp.FileOpen(filepath,'');
             eXT.ImarisApp.GetSurpassCamera.Fit();
         end
-        
-        function RunBatch( eXT, batchPath, analysis_function )
+        function analyzeImage(eXT, isAppend, analysis_function)
+            
+            fileDir =[];
+            data = [];
+            [dir filename ext] = eXT.GetCurrentFileName();
+            
+            nChan = eXT.GetSize('C');
+            
+            %append name of analysis function to the filename
+            funcData = functions( analysis_function );
+            funcName = funcData.function;
+
+            fileDir = dir;
+            
+            
+            if isAppend
+                file = ['/' funcName '-analysis.csv'];
+            else
+                file = ['/' filename '-' funcName '.csv'];
+                
+            end
+            
+            filePath = [fileDir file];
+            
+            if exist(filePath, 'file') == 2 && isAppend
+                % Read In the data
+                data = readtable(filePath, 'Delimiter' ,',');
+            else
+                data = table;
+            end
+            
+            result = analysis_function( eXT );
+            
+            result.Image = repmat({filename}, size(result,1),1);
+            
+            % Append file Name here
+            data = [data; result];
+            writetable(data,filePath, 'Delimiter' ,',');
+        end
+
+        function RunBatch( eXT, batchPath, analysis_function, isAppend )
             %Get the starting path for the directory
             lastImgPath = eXT.GetCurrentFileName();
             
@@ -582,7 +621,7 @@ classdef EasyXT < handle
                     if ~ismember([file,'.ims'], processedFileNames)
                         eXT.OpenImage(fullfile(batchPath, file));               
                         % Run the processing
-                        analysis_function(eXT);
+                        analyzeImage(eXT, isAppend, analysis_function);
                         eXT.ImarisApp.FileSave([fullfile(saveDir, file) '.ims'],'');                     
                         pause(2);
                     else
