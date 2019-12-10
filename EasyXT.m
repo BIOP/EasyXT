@@ -559,7 +559,40 @@ classdef EasyXT < handle
             eXT.ImarisApp.GetSurpassCamera.Fit();
         end
         
-        
+        function RunBatch( eXT, batchPath, analysis_function )
+            %Get the starting path for the directory
+            lastImgPath = eXT.GetCurrentFileName();
+            
+            % Ask for the directory
+            files = dir( fullfile(batchPath) ); % List the files
+            files = {files.name}'; % Keep only the name as a Cell Array
+            saveDir = [batchPath,'/Results/'];
+            
+            mkdir(saveDir);
+            
+            % Check for files that already exist
+            processedFiles = dir(saveDir);
+            processedFileNames = {processedFiles.name}';
+            
+            % Go through the files
+            for i = 1:numel(files)
+                file = files{i};
+               
+                if eXT.isImage(file) && ~strcmp('.',file) &&  ~strcmp('..',file)
+                    if ~ismember([file,'.ims'], processedFileNames)
+                        eXT.OpenImage(fullfile(batchPath, file));               
+                        % Run the processing
+                        analysis_function(eXT);
+                        eXT.ImarisApp.FileSave([fullfile(saveDir, file) '.ims'],'');                     
+                        pause(2);
+                    else
+                        fprintf('%s: already processed\n', file)
+                    end
+                    
+                end
+            end
+        end
+
         function CreateNewScene(eXT)
             %% CREATENEWSCENE Creates a new Surpass scene
             % CreateNewScene() is useful for clearning the current scene in
@@ -2533,20 +2566,23 @@ classdef EasyXT < handle
             
         end
         
-        function booleanIsImage = isImage(~, fileName)
+        function booleanIsImage = isImage(eXT, fileName)
             %% isImage takes the fileName as argument and returns
             %  1 if the file name ends with an authorized file format
             %  from the list {'czi' 'tif' 'ids' 'lsm'}, or 0.
-            extFileImage = {'czi' 'tif' 'ics' 'lsm'};
+            extFileImage = {'czi' 'tif' 'ics' 'lsm' 'ims'};
+            version = eXT.ImarisApp.GetVersion;
             
+            % Imaris 9 only opens ims files
+            if contains(string(version), "9.")
+                extFileImage = {'ims'};
+            end
             % create the Regex that check fileName
             extExpression = strcat('\w*\.',extFileImage,'$');
             
             % check if the fileName ends with any of the listed files format
             booleanIsImage = any(cell2mat(regexp(fileName,extExpression))) > 0 ;
-            if  booleanIsImage
-                fprintf('%s is an image file\n',fileName)
-            end
+            
         end
         
         %% Camera Display Helpers
