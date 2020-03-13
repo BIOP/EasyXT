@@ -928,17 +928,6 @@ classdef EasyXT < handle
                             aMax(1), aMax(2), aMax(3), ...
                             aSize(1), aSize(2), aSize(3), ...
                             time(ind)-1);
-                        
-                        switch dataType
-                            case '8-bit'
-                                chanSlice = vDataSet.GetDataSliceBytes(z-1, maskChannel-1,time(ind)-1);
-                            case '16-bit'
-                                chanSlice = vDataSet.GetDataSliceShorts(z-1, maskChannel-1,time(ind)-1);
-                            case '32-bit'
-                                chanSlice = vDataSet.GetDataSliceFloats(z-1, maskChannel-1,time(ind)-1);
-                        end
-                        
-                        
                     end
                 end
                 
